@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+set -euo pipefail
+# devenv stage-1 installer.
+# Pipe-safe: paste `curl -fsSL https://raw.githubusercontent.com/duthaho/devenv/main/install | sh`.
+
+REPO="${DEVENV_REPO:-https://github.com/duthaho/devenv.git}"
+BRANCH="${DEVENV_BRANCH:-main}"
+DEST="${DEVENV_DIR:-$HOME/.local/share/devenv}"
+
+note() { printf '[devenv] %s\n' "$*" >&2; }
+
+need() {
+  command -v "$1" >/dev/null 2>&1 || { note "ERROR: missing required tool: $1"; exit 1; }
+}
+
+case "$(uname -s)" in
+  Darwin) need git ;;
+  Linux*)
+    if ! command -v git >/dev/null 2>&1; then
+      note "Installing git via OS package manager"
+      if   command -v apt-get >/dev/null 2>&1; then sudo apt-get update -qq && sudo apt-get install -y git
+      elif command -v dnf     >/dev/null 2>&1; then sudo dnf install -y git
+      elif command -v pacman  >/dev/null 2>&1; then sudo pacman -S --needed --noconfirm git
+      else note "ERROR: install git manually and re-run"; exit 1
+      fi
+    fi
+    ;;
+  *) note "ERROR: this installer supports macOS and Linux. Use install.ps1 on Windows."; exit 1 ;;
+esac
+
+if [ -d "$DEST/.git" ]; then
+  note "Updating existing clone at $DEST"
+  git -C "$DEST" fetch --quiet
+  git -C "$DEST" checkout --quiet "$BRANCH"
+  git -C "$DEST" pull --ff-only
+else
+  note "Cloning $REPO -> $DEST"
+  mkdir -p "$(dirname "$DEST")"
+  git clone --branch "$BRANCH" "$REPO" "$DEST"
+fi
+
+note "Executing $DEST/bootstrap.sh"
+exec bash "$DEST/bootstrap.sh" "$@"

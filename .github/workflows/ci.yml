@@ -1,0 +1,144 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: '0 8 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: ShellCheck
+        uses: ludeeus/action-shellcheck@2.0.0
+        with:
+          severity: warning
+          ignore_paths: tests/fixtures
+
+      - name: PSScriptAnalyzer
+        shell: pwsh
+        run: |
+          Install-Module PSScriptAnalyzer -Force -SkipPublisherCheck
+          # Excluded stylistic rules:
+          # - PSAvoidUsingWriteHost: Write-Host is used intentionally in install.ps1 for color output
+          # - PSUseSingularNouns: 'Os' is domain terminology, not a plural
+          # - PSUseDeclaredVarsMoreThanAssignments: false positive on $rc updated inside ForEach-Object
+          # - PSUseShouldProcessForStateChangingFunctions: internal marker writes + test helpers are not user-facing
+          $results = Invoke-ScriptAnalyzer -Path . -Recurse -Settings PSGallery `
+            -ExcludeRule PSAvoidUsingWriteHost,PSUseSingularNouns,PSUseDeclaredVarsMoreThanAssignments,PSUseShouldProcessForStateChangingFunctions
+          $results | Format-Table
+          if ($results | Where-Object Severity -in 'Error','Warning') { exit 1 }
+
+  test-unix:
+    name: test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install bats
+        run: |
+          if [ "${{ matrix.os }}" = "macos-latest" ]; then
+            brew install bats-core
+          else
+            sudo apt-get update -qq && sudo apt-get install -y bats
+          fi
+          bats --version
+
+      - name: Install Pester
+        shell: pwsh
+        run: Install-Module Pester -Force -SkipPublisherCheck -MinimumVersion 5.0.0
+
+      - name: bats unit tests
+        run: ./tests/run.sh
+
+      - name: Pester unit tests
+        shell: pwsh
+        run: ./tests/run.ps1
+
+      - name: Smoke bootstrap (mock op, fake dotfiles)
+        env:
+          OP_MOCK: '1'
+          DOTFILES_REMOTE: file://${{ github.workspace }}/tests/fixtures/fake-dotfiles
+          DOTFILES_DIR:    ${{ runner.temp }}/dotfiles
+          DEVENV_NON_INTERACTIVE: '1'
+        run: |
+          git -C tests/fixtures/fake-dotfiles init -q
+          git -C tests/fixtures/fake-dotfiles add -A
+          git -C tests/fixtures/fake-dotfiles -c user.email=ci@example.com -c user.name=ci commit -q -m fix
+          ./bootstrap.sh --non-interactive
+
+      - name: Idempotency - second run should be a no-op
+        env:
+          OP_MOCK: '1'
+          DOTFILES_REMOTE: file://${{ github.workspace }}/tests/fixtures/fake-dotfiles
+          DOTFILES_DIR:    ${{ runner.temp }}/dotfiles
+          DEVENV_NON_INTERACTIVE: '1'
+        run: |
+          out=$(./bootstrap.sh --non-interactive 2>&1)
+          echo "$out"
+          echo "$out" | grep -q "up-to-date (cached)" || { echo 'second run did not hit cache' ; exit 1 ; }
+
+  test-windows:
+    name: test (windows-latest)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Pester
+        shell: pwsh
+        run: Install-Module Pester -Force -SkipPublisherCheck -MinimumVersion 5.0.0
+
+      - name: Install bats (Git Bash)
+        shell: bash
+        run: |
+          git clone --depth 1 https://github.com/bats-core/bats-core.git "$RUNNER_TEMP/bats-core"
+          "$RUNNER_TEMP/bats-core/install.sh" "$HOME/.local"
+          export PATH="$HOME/.local/bin:$PATH"
+          bats --version
+
+      - name: bats unit tests
+        shell: bash
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          ./tests/run.sh
+
+      - name: Pester unit tests
+        shell: pwsh
+        run: ./tests/run.ps1
+
+      - name: Smoke bootstrap (mock op, fake dotfiles)
+        shell: pwsh
+        env:
+          OP_MOCK: '1'
+          DOTFILES_REMOTE: file:///${{ github.workspace }}/tests/fixtures/fake-dotfiles
+          DOTFILES_DIR:    ${{ runner.temp }}\dotfiles
+          DEVENV_NON_INTERACTIVE: '1'
+        run: |
+          git -C tests/fixtures/fake-dotfiles init -q
+          git -C tests/fixtures/fake-dotfiles add -A
+          git -C tests/fixtures/fake-dotfiles -c user.email=ci@example.com -c user.name=ci commit -q -m fix
+          pwsh -NoProfile -File .\bootstrap.ps1 -NonInteractive
+
+      - name: Idempotency - second run should be a no-op
+        shell: pwsh
+        env:
+          OP_MOCK: '1'
+          DOTFILES_REMOTE: file:///${{ github.workspace }}/tests/fixtures/fake-dotfiles
+          DOTFILES_DIR:    ${{ runner.temp }}\dotfiles
+          DEVENV_NON_INTERACTIVE: '1'
+        run: |
+          $out = pwsh -NoProfile -File .\bootstrap.ps1 -NonInteractive 2>&1 | Out-String
+          Write-Output $out
+          if ($out -notmatch 'up-to-date \(cached\)') { Write-Error 'second run did not hit cache'; exit 1 }

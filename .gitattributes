@@ -1,0 +1,28 @@
+# Lock line endings cross-platform so module SHAs agree on Unix and Windows.
+# Without these, `core.autocrlf` + editor habits can produce divergent on-disk
+# bytes and break idempotency markers.
+
+*           text=auto eol=lf
+*.sh        text eol=lf
+*.bats      text eol=lf
+*.md        text eol=lf
+*.yml       text eol=lf
+*.yaml      text eol=lf
+*.toml      text eol=lf
+*.json      text eol=lf
+*.gitkeep   text eol=lf
+LICENSE     text eol=lf
+.gitignore  text eol=lf
+.editorconfig text eol=lf
+
+# PowerShell stays CRLF per convention (and per .editorconfig).
+*.ps1       text eol=crlf
+*.psm1      text eol=crlf
+*.psd1      text eol=crlf
+
+# Binaries (none yet, but be explicit if added)
+*.png       binary
+*.jpg       binary
+*.jpeg      binary
+*.gif       binary
+*.ico       binary

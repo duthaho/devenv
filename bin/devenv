@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+set -euo pipefail
+# devenv daily-driver CLI. Phase 1 subset.
+
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="$(cd "$HERE/.." && pwd)"
+# shellcheck disable=SC1091
+. "$ROOT/lib/log.sh"
+
+cmd="${1:-help}"; shift || true
+
+usage() {
+  cat <<'EOF'
+Usage: devenv <command> [flags]
+
+Commands (Phase 1):
+  up [flags]      run the bootstrap orchestrator (forwards flags to bootstrap.sh)
+  doctor          run each module's doctor and report PASS/WARN/FAIL
+  help            print this help
+
+Phase 2+ (not yet implemented):
+  update          git pull + re-run changed modules
+  services *      manage docker baseline services
+  repos clone     sync configured project repos
+
+Run `devenv up --help` for orchestrator flags.
+EOF
+}
+
+cmd_up() {
+  exec bash "$ROOT/bootstrap.sh" "$@"
+}
+
+cmd_doctor() {
+  local rc=0
+  for d in "$ROOT"/modules/*/; do
+    name="$(basename "${d%/}")"
+    if [ -x "$d/doctor.sh" ]; then
+      out="$("$d/doctor.sh" 2>&1)" && printf '%s\n' "[OK]   $name $out" || { printf '%s\n' "[FAIL] $name $out"; rc=1; }
+    else
+      printf '%s\n' "[--]   $name (no doctor)"
+    fi
+  done
+  return $rc
+}
+
+case "$cmd" in
+  up)      cmd_up "$@" ;;
+  doctor)  cmd_doctor ;;
+  help|-h|--help) usage ;;
+  update|services|repos) log_err "$cmd: not implemented in Phase 1"; exit 2 ;;
+  *)       log_err "Unknown command: $cmd"; usage; exit 2 ;;
+esac

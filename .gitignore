@@ -1,0 +1,25 @@
+# devenv local overrides
+.devenv.local.toml
+services/compose.local.yml
+*.local.*
+
+# OS junk
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*~
+
+# Test artifacts
+tests/.bats/
+tests/.tmp/
+coverage/
+*.log
+
+# Build / cache
+node_modules/
+.cache/
