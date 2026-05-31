@@ -1,0 +1,9 @@
+# Global mise defaults. Per-project .mise.toml overrides these.
+[tools]
+node    = "lts"
+python  = "3.13"
+go      = "1.24"
+rust    = "stable"
+
+[settings]
+experimental = true

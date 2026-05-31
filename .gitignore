@@ -2,6 +2,7 @@
 .devenv.local.toml
 services/compose.local.yml
 *.local.*
+devenv.cmd
 
 # OS junk
 .DS_Store

@@ -1,11 +1,22 @@
 #!/usr/bin/env bash
 set -euo pipefail
-# devenv daily-driver CLI. Phase 1 subset.
 
-HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SOURCE="${BASH_SOURCE[0]}"
+while [ -L "$SOURCE" ]; do
+  DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
+  SOURCE="$(readlink "$SOURCE")"
+  case "$SOURCE" in
+    /*) ;;
+    ?:[/\\]*) ;;
+    *) SOURCE="$DIR/$SOURCE" ;;
+  esac
+done
+HERE="$(cd -P "$(dirname "$SOURCE")" && pwd)"
 ROOT="$(cd "$HERE/.." && pwd)"
 # shellcheck disable=SC1091
 . "$ROOT/lib/log.sh"
+# shellcheck disable=SC1091
+. "$ROOT/lib/docker.sh"
 
 cmd="${1:-help}"; shift || true
 
@@ -13,24 +24,22 @@ usage() {
   cat <<'EOF'
 Usage: devenv <command> [flags]
 
-Commands (Phase 1):
-  up [flags]      run the bootstrap orchestrator (forwards flags to bootstrap.sh)
-  doctor          run each module's doctor and report PASS/WARN/FAIL
-  help            print this help
+Commands:
+  up [flags]               run the bootstrap orchestrator
+  doctor                   run each module's doctor
+  services up [profiles..] bring up baseline + named profiles (default if none)
+  services down            stop all services
+  services status          list running services
+  services logs <svc>      tail a service's logs
+  services init <svc> <p>  create per-project DB / bucket / index in shared instance
+  services nuke --yes      stop services AND wipe all volumes
+  help                     this help
 
-Phase 2+ (not yet implemented):
-  update          git pull + re-run changed modules
-  services *      manage docker baseline services
-  repos clone     sync configured project repos
-
-Run `devenv up --help` for orchestrator flags.
+Not yet implemented: update, repos.
 EOF
 }
 
-cmd_up() {
-  exec bash "$ROOT/bootstrap.sh" "$@"
-}
-
+cmd_up()     { exec bash "$ROOT/bootstrap.sh" "$@"; }
 cmd_doctor() {
   local rc=0
   for d in "$ROOT"/modules/*/; do
@@ -44,10 +53,61 @@ cmd_doctor() {
   return $rc
 }
 
+_compose() {
+  # shellcheck disable=SC2046
+  docker compose $(devenv_compose_args) "$@"
+}
+
+_all_profile_flags="--profile default --profile aws --profile search --profile vectors --profile queues --profile analytics --profile observability --profile alt-db --profile auth"
+
+_compose_all() {
+  # shellcheck disable=SC2086
+  _compose $_all_profile_flags "$@"
+}
+
+cmd_services() {
+  local sub="${1:-help}"; shift || true
+  case "$sub" in
+    up)
+      local profiles=("$@")
+      [ "${#profiles[@]}" -eq 0 ] && profiles=(default)
+      local flags=()
+      local p; for p in "${profiles[@]}"; do flags+=(--profile "$p"); done
+      _compose "${flags[@]}" up -d
+      ;;
+    down)   _compose_all down ;;
+    status) _compose_all ps ;;
+    logs)
+      [ -n "${1:-}" ] || { log_err "services logs <service>"; return 2; }
+      _compose logs -f "$1"
+      ;;
+    init)
+      [ -n "${1:-}" ] && [ -n "${2:-}" ] || { log_err "services init <svc> <project>"; return 2; }
+      local svc="$1" proj="$2"
+      local db; db="$(devenv_db_for_project "$proj")"
+      case "$svc" in
+        postgres) _compose exec -T postgres psql -U dev -d dev -c "CREATE DATABASE $db;" ;;
+        mysql)    _compose exec -T mysql mysql -u root -pdev -e "CREATE DATABASE IF NOT EXISTS $db;" ;;
+        minio)    _compose exec -T minio sh -c "mc alias set local http://localhost:9000 dev devsecret >/dev/null && mc mb -p local/${proj}-dev" ;;
+        opensearch) _compose exec -T opensearch curl -fsS -X PUT "http://localhost:9200/$db" ;;
+        *) log_err "init: unsupported service '$svc' (supported: postgres, mysql, minio, opensearch)"; return 2 ;;
+      esac
+      ;;
+    nuke)
+      [ "${1:-}" = "--yes" ] || { log_err 'services nuke requires --yes'; return 2; }
+      _compose_all down -v
+      log_info "All devenv volumes wiped."
+      ;;
+    help|-h|--help|'') usage ;;
+    *) log_err "services: unknown subcommand '$sub'"; return 2 ;;
+  esac
+}
+
 case "$cmd" in
-  up)      cmd_up "$@" ;;
-  doctor)  cmd_doctor ;;
+  up)             cmd_up "$@" ;;
+  doctor)         cmd_doctor ;;
+  services)       cmd_services "$@" ;;
   help|-h|--help) usage ;;
-  update|services|repos) log_err "$cmd: not implemented in Phase 1"; exit 2 ;;
-  *)       log_err "Unknown command: $cmd"; usage; exit 2 ;;
+  update|repos)   log_err "$cmd: not implemented yet"; exit 2 ;;
+  *)              log_err "Unknown command: $cmd"; usage; exit 2 ;;
 esac

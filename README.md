@@ -39,13 +39,41 @@ devenv doctor                   per-module health check
 devenv help                     usage
 ```
 
-## Modules (Phase 1)
+## Modules
 
 | Module | Purpose | Platforms |
 |---|---|---|
 | `00-base` | Package managers + `git`, `jq`, `gum` | all |
 | `10-1password` | 1Password app + CLI + SSH agent | all |
 | `20-dotfiles` | Clone + run [duthaho/dotfiles](https://github.com/duthaho/dotfiles) bootstrap | all |
+| `30-toolchains` | `mise` + `direnv` everywhere, `devbox` on Unix-family | all (devbox skipped on native Windows) |
+| `40-docker` | Docker engine + `devenv` network + baseline compose stack | all |
+
+## Services
+
+After `devenv up`, the baseline Docker stack runs on the shared `devenv` network:
+
+| Service   | Host (in-network) | Host (localhost) | User   | Password   |
+|-----------|-------------------|------------------|--------|------------|
+| Postgres  | `postgres.devenv` | `localhost:5432` | `dev`  | `dev`      |
+| MySQL     | `mysql.devenv`    | `localhost:3306` | `dev`  | `dev`      |
+| Redis     | `redis.devenv`    | `localhost:6379` | —      | —          |
+| Mailpit   | `mailpit.devenv`  | UI `localhost:8025`, SMTP `:1025` | — | — |
+| MinIO     | `minio.devenv`    | API `:9000`, UI `:9001` | `dev` | `devsecret` |
+| Adminer   | `adminer.devenv`  | `localhost:8080` | —      | —          |
+
+Optional profiles: `aws` (LocalStack), `search` (OpenSearch + Dashboards), `vectors` (Qdrant), `queues` (RabbitMQ + Redpanda), `analytics` (ClickHouse), `observability` (Jaeger + Prometheus + Grafana + Loki + OTel), `alt-db` (Mongo), `auth` (Keycloak).
+
+```bash
+devenv services up                     # default profile
+devenv services up search observability
+devenv services status
+devenv services init postgres myapp    # CREATE DATABASE myapp_dev
+devenv services down
+devenv services nuke --yes             # wipe all volumes
+```
+
+Per-machine extensions: drop a `compose.local.yml` at `~/.devenv/services/compose.local.yml` — it merges on top of the baseline automatically.
 
 ## Development
 

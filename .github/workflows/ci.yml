@@ -142,3 +142,46 @@ jobs:
           $out = pwsh -NoProfile -File .\bootstrap.ps1 -NonInteractive 2>&1 | Out-String
           Write-Output $out
           if ($out -notmatch 'up-to-date \(cached\)') { Write-Error 'second run did not hit cache'; exit 1 }
+
+  docker-smoke:
+    name: docker smoke (ubuntu-latest)
+    runs-on: ubuntu-latest
+    needs: [test-unix]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate compose schema
+        run: |
+          docker compose -f services/compose.yml \
+            --profile default --profile aws --profile search --profile vectors \
+            --profile queues --profile analytics --profile observability \
+            --profile alt-db --profile auth \
+            config -q
+
+      - name: Create devenv network
+        run: docker network create devenv
+
+      - name: Up default profile
+        run: |
+          docker compose -f services/compose.yml --profile default up -d
+          docker compose -f services/compose.yml --profile default ps
+
+      - name: Wait for health
+        run: |
+          for svc in postgres mysql redis minio; do
+            for i in $(seq 1 30); do
+              health=$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "devenv-$svc-1" 2>/dev/null || echo missing)
+              [ "$health" = healthy ] || [ "$health" = none ] && break
+              sleep 2
+            done
+          done
+
+      - name: services init postgres + mysql
+        run: |
+          bash bin/devenv services init postgres ciapp
+          bash bin/devenv services init mysql    ciapp
+          docker compose -f services/compose.yml --profile default exec -T postgres psql -U dev -d ciapp_dev -c 'select 1' | grep -q ' 1'
+
+      - name: Tear down
+        if: always()
+        run: docker compose -f services/compose.yml --profile default down -v

@@ -84,4 +84,30 @@ if ($failed) {
     Write-DevenvError 'bootstrap aborted. Inspect ~/.cache/devenv/*.log, then re-run.'
     exit 1
 }
+
+function Set-DevenvCliShim {
+    $bin = Join-Path $Here 'bin'
+    $ps1 = Join-Path $bin 'devenv.ps1'
+    if (-not (Test-Path $ps1)) { Write-DevenvWarn 'bin/devenv.ps1 missing; skipping CLI shim'; return }
+    $shim = Join-Path $bin 'devenv.cmd'
+    @"
+@echo off
+pwsh -NoProfile -File "$ps1" %*
+"@ | Set-Content -Encoding ASCII -Path $shim
+    Write-DevenvInfo "Wrote CLI shim $shim"
+
+    $user = [Environment]::GetEnvironmentVariable('PATH', 'User')
+    $onPath = $false
+    if ($user) { $onPath = ($user -split ';') -icontains $bin }
+    if ($onPath) {
+        Write-DevenvInfo "$bin already in user PATH"
+    } else {
+        $newPath = if ($user) { "$user;$bin" } else { $bin }
+        [Environment]::SetEnvironmentVariable('PATH', $newPath, 'User')
+        Write-DevenvInfo "Added $bin to user PATH (restart shells to pick it up)"
+    }
+    Update-DevenvPath
+}
+Set-DevenvCliShim
+
 Write-DevenvInfo 'bootstrap complete'

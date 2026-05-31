@@ -86,4 +86,25 @@ if [ "$failed" -ne 0 ]; then
   log_err "bootstrap aborted. Inspect ~/.cache/devenv/*.log for details, then re-run."
   exit 1
 fi
+
+link_cli() {
+  local cli="$HERE/bin/devenv"
+  local link="$HOME/.local/bin/devenv"
+  [ -x "$cli" ] || { log_warn "bin/devenv not executable; skipping CLI link"; return 0; }
+  mkdir -p "$HOME/.local/bin"
+  if [ -L "$link" ] && [ "$(readlink "$link")" = "$cli" ]; then
+    log_info "devenv CLI link already at $link"
+  elif [ -e "$link" ] && [ ! -L "$link" ]; then
+    log_warn "$link exists and is not a symlink; refusing to overwrite. Remove it and re-run."
+  else
+    ln -sf "$cli" "$link"
+    log_info "Linked $link -> $cli"
+  fi
+  case ":$PATH:" in
+    *":$HOME/.local/bin:"*) ;;
+    *) log_warn "~/.local/bin is not on \$PATH. Add: export PATH=\"\$HOME/.local/bin:\$PATH\"" ;;
+  esac
+}
+link_cli
+
 log_info "bootstrap complete"

@@ -1,0 +1,259 @@
+name: devenv
+
+networks:
+  devenv:
+    external: true
+
+volumes:
+  postgres-data:
+  mysql-data:
+  redis-data:
+  minio-data:
+  opensearch-data:
+  qdrant-data:
+  rabbitmq-data:
+  redpanda-data:
+  clickhouse-data:
+  prometheus-data:
+  grafana-data:
+  loki-data:
+  mongo-data:
+  keycloak-data:
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    profiles: [default]
+    environment:
+      POSTGRES_USER: dev
+      POSTGRES_PASSWORD: dev
+      POSTGRES_DB: dev
+    volumes: [postgres-data:/var/lib/postgresql/data]
+    ports: ["5432:5432"]
+    networks:
+      devenv:
+        aliases: [postgres.devenv]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dev"]
+      interval: 5s
+      retries: 10
+
+  mysql:
+    image: mysql:8
+    profiles: [default]
+    environment:
+      MYSQL_ROOT_PASSWORD: dev
+      MYSQL_DATABASE: dev
+      MYSQL_USER: dev
+      MYSQL_PASSWORD: dev
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    volumes: [mysql-data:/var/lib/mysql]
+    ports: ["3306:3306"]
+    networks:
+      devenv:
+        aliases: [mysql.devenv]
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-pdev"]
+      interval: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    profiles: [default]
+    volumes: [redis-data:/data]
+    ports: ["6379:6379"]
+    networks:
+      devenv:
+        aliases: [redis.devenv]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 10
+
+  mailpit:
+    image: axllent/mailpit:latest
+    profiles: [default]
+    ports: ["1025:1025", "8025:8025"]
+    networks:
+      devenv:
+        aliases: [mailpit.devenv]
+
+  minio:
+    image: minio/minio:latest
+    profiles: [default]
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: dev
+      MINIO_ROOT_PASSWORD: devsecret
+    volumes: [minio-data:/data]
+    ports: ["9000:9000", "9001:9001"]
+    networks:
+      devenv:
+        aliases: [minio.devenv]
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      retries: 10
+
+  adminer:
+    image: adminer:latest
+    profiles: [default]
+    ports: ["8080:8080"]
+    networks:
+      devenv:
+        aliases: [adminer.devenv]
+
+  localstack:
+    image: localstack/localstack:3
+    profiles: [aws]
+    environment:
+      SERVICES: sqs,sns,dynamodb,lambda,kms,iam,s3
+      DEBUG: "0"
+    ports: ["4566:4566"]
+    networks:
+      devenv:
+        aliases: [localstack.devenv]
+
+  opensearch:
+    image: opensearchproject/opensearch:2
+    profiles: [search]
+    environment:
+      discovery.type: single-node
+      DISABLE_SECURITY_PLUGIN: "true"
+      OPENSEARCH_INITIAL_ADMIN_PASSWORD: devSecret123!
+    volumes: [opensearch-data:/usr/share/opensearch/data]
+    ports: ["9200:9200"]
+    networks:
+      devenv:
+        aliases: [opensearch.devenv]
+
+  opensearch-dashboards:
+    image: opensearchproject/opensearch-dashboards:2
+    profiles: [search]
+    environment:
+      OPENSEARCH_HOSTS: '["http://opensearch.devenv:9200"]'
+      DISABLE_SECURITY_DASHBOARDS_PLUGIN: "true"
+    ports: ["5601:5601"]
+    depends_on: [opensearch]
+    networks:
+      devenv:
+        aliases: [opensearch-dashboards.devenv]
+
+  qdrant:
+    image: qdrant/qdrant:v1.12.4
+    profiles: [vectors]
+    volumes: [qdrant-data:/qdrant/storage]
+    ports: ["6333:6333"]
+    networks:
+      devenv:
+        aliases: [qdrant.devenv]
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    profiles: [queues]
+    volumes: [rabbitmq-data:/var/lib/rabbitmq]
+    ports: ["5672:5672", "15672:15672"]
+    networks:
+      devenv:
+        aliases: [rabbitmq.devenv]
+
+  redpanda:
+    image: docker.redpanda.com/redpandadata/redpanda:v24.3.1
+    profiles: [queues]
+    command: >
+      redpanda start
+      --overprovisioned
+      --smp 1
+      --memory 1G
+      --reserve-memory 0M
+      --node-id 0
+      --check=false
+      --kafka-addr PLAINTEXT://0.0.0.0:9092
+      --advertise-kafka-addr PLAINTEXT://redpanda.devenv:9092
+    volumes: [redpanda-data:/var/lib/redpanda/data]
+    ports: ["9092:9092"]
+    networks:
+      devenv:
+        aliases: [redpanda.devenv]
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:24-alpine
+    profiles: [analytics]
+    volumes: [clickhouse-data:/var/lib/clickhouse]
+    ports: ["8123:8123", "9002:9000"]
+    networks:
+      devenv:
+        aliases: [clickhouse.devenv]
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    profiles: [observability]
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports: ["16686:16686", "4317:4317", "4318:4318"]
+    networks:
+      devenv:
+        aliases: [jaeger.devenv]
+
+  prometheus:
+    image: prom/prometheus:latest
+    profiles: [observability]
+    volumes: [prometheus-data:/prometheus]
+    ports: ["9090:9090"]
+    networks:
+      devenv:
+        aliases: [prometheus.devenv]
+
+  grafana:
+    image: grafana/grafana:latest
+    profiles: [observability]
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+    volumes: [grafana-data:/var/lib/grafana]
+    ports: ["3000:3000"]
+    networks:
+      devenv:
+        aliases: [grafana.devenv]
+
+  loki:
+    image: grafana/loki:latest
+    profiles: [observability]
+    volumes: [loki-data:/loki]
+    ports: ["3100:3100"]
+    networks:
+      devenv:
+        aliases: [loki.devenv]
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    profiles: [observability]
+    ports: ["4319:4317", "4320:4318"]
+    networks:
+      devenv:
+        aliases: [otel.devenv]
+
+  mongo:
+    image: mongo:7
+    profiles: [alt-db]
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: dev
+      MONGO_INITDB_ROOT_PASSWORD: dev
+    volumes: [mongo-data:/data/db]
+    ports: ["27017:27017"]
+    networks:
+      devenv:
+        aliases: [mongo.devenv]
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    profiles: [auth]
+    command: start-dev
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+    volumes: [keycloak-data:/opt/keycloak/data]
+    ports: ["8081:8080"]
+    networks:
+      devenv:
+        aliases: [keycloak.devenv]
