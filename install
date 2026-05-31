@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-# devenv stage-1 installer.
-# Pipe-safe: paste `curl -fsSL https://raw.githubusercontent.com/duthaho/devenv/main/install | sh`.
+# Run: curl -fsSL https://raw.githubusercontent.com/duthaho/devenv/main/install | bash
 
 REPO="${DEVENV_REPO:-https://github.com/duthaho/devenv.git}"
 BRANCH="${DEVENV_BRANCH:-main}"

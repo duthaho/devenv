@@ -11,7 +11,7 @@ One-terminal-command bootstrap for a full development environment. Cross-platfor
 **macOS / Linux / WSL2 (one-liner):**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/duthaho/devenv/main/install | sh
+curl -fsSL https://raw.githubusercontent.com/duthaho/devenv/main/install | bash
 ```
 
 **Windows (PowerShell 7):**
