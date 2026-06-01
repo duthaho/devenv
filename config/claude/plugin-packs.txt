@@ -1,0 +1,5 @@
+# Claude Code plugin packs. One "owner/repo[#ref]" per line.
+# Cloned into ~/.claude/plugins/cache/<owner>/<repo>.
+# Examples (uncomment to enable):
+# anthropics/claude-plugins-official
+# obra/superpowers

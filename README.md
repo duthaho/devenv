@@ -4,7 +4,7 @@
 
 One-terminal-command bootstrap for a full development environment. Cross-platform: macOS, Linux, Windows + WSL2. Extends [duthaho/dotfiles](https://github.com/duthaho/dotfiles) with secrets, language toolchains, Docker baseline services, IDEs, and Claude Code tooling.
 
-> **Status:** Phase 1 (MVP). Currently ships `00-base`, `10-1password`, and `20-dotfiles`. Later phases add `30-toolchains`, `40-docker`, `50-ide`, `60-claude`, `70-repos`, and `80-gui`.
+> **Status:** v1 in progress. Ships modules `00-base` → `60-claude`. Remaining: `70-repos`, `80-gui`.
 
 ## Quickstart
 
@@ -48,6 +48,8 @@ devenv help                     usage
 | `20-dotfiles` | Clone + run [duthaho/dotfiles](https://github.com/duthaho/dotfiles) bootstrap | all |
 | `30-toolchains` | `mise` + `direnv` everywhere, `devbox` on Unix-family | all (devbox skipped on native Windows) |
 | `40-docker` | Docker engine + `devenv` network + baseline compose stack | all |
+| `50-ide` | VS Code + Cursor + extension list + settings overlay | all (Linux: install warn-and-skip) |
+| `60-claude` | Claude Code CLI + MCP servers + plugin packs + `op`-injected settings | all (requires npm from 30-toolchains) |
 
 ## Services
 

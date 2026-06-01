@@ -73,6 +73,9 @@ jobs:
           DOTFILES_REMOTE: file://${{ github.workspace }}/tests/fixtures/fake-dotfiles
           DOTFILES_DIR:    ${{ runner.temp }}/dotfiles
           DEVENV_NON_INTERACTIVE: '1'
+          DEVENV_SKIP_NPM_INSTALL: '1'
+          DEVENV_SKIP_CODE_INSTALL: '1'
+          DEVENV_CLAUDE_CACHE_DIR: ${{ runner.temp }}/claude-cache
         run: |
           git -C tests/fixtures/fake-dotfiles init -q
           git -C tests/fixtures/fake-dotfiles add -A
@@ -85,6 +88,9 @@ jobs:
           DOTFILES_REMOTE: file://${{ github.workspace }}/tests/fixtures/fake-dotfiles
           DOTFILES_DIR:    ${{ runner.temp }}/dotfiles
           DEVENV_NON_INTERACTIVE: '1'
+          DEVENV_SKIP_NPM_INSTALL: '1'
+          DEVENV_SKIP_CODE_INSTALL: '1'
+          DEVENV_CLAUDE_CACHE_DIR: ${{ runner.temp }}/claude-cache
         run: |
           out=$(./bootstrap.sh --non-interactive 2>&1)
           echo "$out"
@@ -125,6 +131,9 @@ jobs:
           DOTFILES_REMOTE: file:///${{ github.workspace }}/tests/fixtures/fake-dotfiles
           DOTFILES_DIR:    ${{ runner.temp }}\dotfiles
           DEVENV_NON_INTERACTIVE: '1'
+          DEVENV_SKIP_NPM_INSTALL: '1'
+          DEVENV_SKIP_CODE_INSTALL: '1'
+          DEVENV_CLAUDE_CACHE_DIR: ${{ runner.temp }}\claude-cache
         run: |
           git -C tests/fixtures/fake-dotfiles init -q
           git -C tests/fixtures/fake-dotfiles add -A
@@ -138,6 +147,9 @@ jobs:
           DOTFILES_REMOTE: file:///${{ github.workspace }}/tests/fixtures/fake-dotfiles
           DOTFILES_DIR:    ${{ runner.temp }}\dotfiles
           DEVENV_NON_INTERACTIVE: '1'
+          DEVENV_SKIP_NPM_INSTALL: '1'
+          DEVENV_SKIP_CODE_INSTALL: '1'
+          DEVENV_CLAUDE_CACHE_DIR: ${{ runner.temp }}\claude-cache
         run: |
           $out = pwsh -NoProfile -File .\bootstrap.ps1 -NonInteractive 2>&1 | Out-String
           Write-Output $out

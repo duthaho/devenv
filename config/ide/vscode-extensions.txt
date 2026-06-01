@@ -1,0 +1,7 @@
+# VS Code extensions installed by `devenv up --only 50-ide`.
+# One id per line. Lines starting with # and blank lines are ignored.
+# Pull your current list with: code --list-extensions
+# Examples (uncomment to enable):
+# editorconfig.editorconfig
+# eamodio.gitlens
+# dbaeumer.vscode-eslint

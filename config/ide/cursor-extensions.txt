@@ -1,0 +1,3 @@
+# Cursor extensions installed by `devenv up --only 50-ide`.
+# One id per line. Cursor accepts the same extension ids as VS Code.
+# Pull your current list with: cursor --list-extensions
