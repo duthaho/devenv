@@ -1,0 +1,11 @@
+# brew bundle file applied by `DEVENV_GUI_ENABLED=1 devenv up --only 80-gui` on macOS (and Linuxbrew, where available).
+# All lines below are commented — uncomment what you want installed.
+# See https://github.com/Homebrew/homebrew-bundle for syntax.
+#
+# Examples:
+# cask "slack"
+# cask "discord"
+# cask "raycast"
+# cask "rectangle"
+# cask "google-chrome"
+# cask "firefox"

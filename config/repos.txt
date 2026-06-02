@@ -1,0 +1,16 @@
+# Project repos cloned by `devenv up --only 70-repos`.
+# One repo per line. Format:
+#
+#     remote [| path [| setup]]
+#
+# - remote: git URL (ssh or https). Required.
+# - path:   target directory. Optional — defaults to ~/code/<basename of remote, .git stripped>.
+# - setup:  shell command run in the repo root after clone or fetch. Optional.
+#           Runs under `sh -c` on Unix and `pwsh -NoProfile -Command` on Windows.
+#
+# Lines starting with # and blank lines are ignored.
+# Idempotency: missing repos -> `git clone --depth 1`; existing repos -> `git fetch`.
+#
+# Examples (uncomment and edit to enable):
+# git@github.com:duthaho/duthaho.dev.git | ~/code/duthaho.dev | mise install && devbox install
+# https://github.com/duthaho/dotfiles.git
