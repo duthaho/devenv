@@ -41,6 +41,15 @@ exit /b $ExitCode
 
     BeforeEach {
         if (Test-Path $script:log) { Remove-Item $script:log -Force }
+        # Restore the default logging stub so tests that overwrite docker.cmd
+        # (status, init-retry) can't leak their stub into later tests.
+        if ($IsWindows) {
+            @"
+@echo off
+echo docker %* >> "$script:log"
+exit /b 0
+"@ | Set-Content -Path (Join-Path $script:stubs 'docker.cmd') -Encoding ASCII
+        }
     }
 
     It 'services help prints usage' -Skip:(-not $IsWindows) {
