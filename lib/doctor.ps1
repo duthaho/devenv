@@ -73,7 +73,9 @@ function Get-DevenvDoctorOp {
 
 function Get-DevenvDoctorSshAgent {
     $os = Get-DevenvOs
-    if ($env:SSH_AUTH_SOCK) {
+    # Require the socket to actually exist, mirroring the bash `[ -S ]` check —
+    # a stale SSH_AUTH_SOCK pointing at nothing must not report PASS.
+    if ($env:SSH_AUTH_SOCK -and (Test-Path $env:SSH_AUTH_SOCK)) {
         return New-DevenvDoctorResult 'PASS' 'ssh-agent' 'agent socket present'
     }
     if ($os -eq 'windows' -and (Test-Path '\\.\pipe\openssh-ssh-agent')) {

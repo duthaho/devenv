@@ -60,9 +60,16 @@ Describe 'lib/doctor.ps1 environment checks' {
         $r.Detail | Should -Match 'mise'
     }
 
-    It 'ssh-agent check PASSes when SSH_AUTH_SOCK is set' {
-        $env:SSH_AUTH_SOCK = (Join-Path $script:sandbox 'agent.sock')
+    It 'ssh-agent check PASSes when SSH_AUTH_SOCK points to an existing socket' {
+        $sock = Join-Path $script:sandbox 'agent.sock'
+        New-Item -ItemType File -Path $sock | Out-Null   # stand-in for the socket file
+        $env:SSH_AUTH_SOCK = $sock
         (Get-DevenvDoctorSshAgent).Status | Should -Be 'PASS'
+    }
+
+    It 'ssh-agent check WARNs when SSH_AUTH_SOCK points to a non-existent path' {
+        $env:SSH_AUTH_SOCK = (Join-Path $script:sandbox 'missing.sock')
+        (Get-DevenvDoctorSshAgent).Status | Should -Be 'WARN'
     }
 
     It 'ssh-agent check WARNs when SSH_AUTH_SOCK is unset' {
