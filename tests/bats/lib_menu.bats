@@ -67,3 +67,48 @@ teardown() { [ -n "${TEST_TMP:-}" ] && rm -rf "$TEST_TMP"; }
   run devenv_menu_should_show 0
   [ "$status" -ne 0 ]
 }
+
+# Install a gum stub whose `choose` returns $modules for the module prompt and
+# $langs for the language prompt (keyed on the --header text).
+_gum_stub() {
+  local mods="$1" langs="$2" rc="${3:-0}"
+  cat > "$STUBS/gum" <<EOF
+#!/usr/bin/env bash
+hdr=""
+while [ "\$#" -gt 0 ]; do case "\$1" in --header) hdr="\$2"; shift 2;; *) shift;; esac; done
+[ "$rc" != 0 ] && exit $rc
+case "\$hdr" in
+  *module*) printf '%s\n' $mods ;;
+  *lang*)   printf '%s\n' $langs ;;
+esac
+exit 0
+EOF
+  chmod +x "$STUBS/gum"
+}
+
+@test "menu_run computes skip set and DEVENV_LANGS from selection" {
+  _gum_stub "'50-ide' '70-repos'" "'node' 'go'"
+  unset DEVENV_LANGS DEVENV_GUI_ENABLED DEVENV_MENU_SKIP
+  devenv_menu_run "$MISE_CFG"
+  [[ ",$DEVENV_MENU_SKIP," == *",60-claude,"* ]]
+  [[ ",$DEVENV_MENU_SKIP," == *",80-gui,"* ]]
+  [[ ",$DEVENV_MENU_SKIP," != *",50-ide,"* ]]
+  [ "$DEVENV_LANGS" = "node,go" ]
+  [ -z "${DEVENV_GUI_ENABLED:-}" ]
+}
+
+@test "menu_run enables gui when 80-gui chosen" {
+  _gum_stub "'50-ide' '80-gui'" "'node'"
+  unset DEVENV_LANGS DEVENV_GUI_ENABLED DEVENV_MENU_SKIP
+  devenv_menu_run "$MISE_CFG"
+  [ "$DEVENV_GUI_ENABLED" = "1" ]
+  [[ ",$DEVENV_MENU_SKIP," != *",80-gui,"* ]]
+}
+
+@test "menu_run returns nonzero and leaves vars unset when gum fails" {
+  _gum_stub "'50-ide'" "'node'" 1
+  unset DEVENV_LANGS DEVENV_GUI_ENABLED DEVENV_MENU_SKIP
+  run devenv_menu_run "$MISE_CFG"
+  [ "$status" -ne 0 ]
+  [ -z "${DEVENV_LANGS:-}" ]
+}
