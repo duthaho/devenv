@@ -75,6 +75,41 @@ exit /b $ExitCode
         $LASTEXITCODE | Should -Be 2
     }
 
+    It 'services init retries a transient failure then succeeds' -Skip:(-not $IsWindows) {
+        $counter = Join-Path $TestDrive 'counter.txt'
+        Remove-Item $counter -ErrorAction SilentlyContinue
+        @"
+@echo off
+echo %*| findstr /C:" exec " >nul
+if errorlevel 1 exit /b 0
+set n=0
+if exist "$counter" set /p n=<"$counter"
+set /a n+=1
+>"$counter" echo %n%
+if "%n%"=="1" ( echo ERROR 2002 1>&2 & exit /b 1 )
+exit /b 0
+"@ | Set-Content -Path (Join-Path $script:stubs 'docker.cmd') -Encoding ASCII
+        $env:DEVENV_INIT_RETRY_DELAY = '0'
+        try { & pwsh -NoProfile -File $script:cli services init mysql myapp 2>&1 | Out-Null }
+        finally { $env:DEVENV_INIT_RETRY_DELAY = $null }
+        $LASTEXITCODE | Should -Be 0
+        [int](Get-Content $counter) | Should -BeGreaterOrEqual 2
+    }
+
+    It 'services init gives up after exhausting retries' -Skip:(-not $IsWindows) {
+        @"
+@echo off
+echo %*| findstr /C:" exec " >nul
+if errorlevel 1 exit /b 0
+echo ERROR 2002 1>&2
+exit /b 1
+"@ | Set-Content -Path (Join-Path $script:stubs 'docker.cmd') -Encoding ASCII
+        $env:DEVENV_INIT_RETRY_DELAY = '0'; $env:DEVENV_INIT_RETRIES = '3'
+        try { & pwsh -NoProfile -File $script:cli services init postgres myapp 2>&1 | Out-Null }
+        finally { $env:DEVENV_INIT_RETRY_DELAY = $null; $env:DEVENV_INIT_RETRIES = $null }
+        $LASTEXITCODE | Should -Not -Be 0
+    }
+
     It 'services nuke without --yes exits 2' -Skip:(-not $IsWindows) {
         & pwsh -NoProfile -File $script:cli services nuke 2>&1 | Out-Null
         $LASTEXITCODE | Should -Be 2

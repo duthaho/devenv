@@ -49,6 +49,38 @@ EOF
   [ "$status" -eq 2 ]
 }
 
+@test "services init retries a transient connection failure and then succeeds" {
+  # docker stub: the first `exec` fails (mimicking the MySQL init/restart gap),
+  # later attempts succeed. Count exec calls in a file.
+  cat > "$STUBS/docker" <<EOF
+#!/usr/bin/env bash
+case " \$* " in
+  *" exec "*)
+    n=\$(cat "$TEST_TMP/n" 2>/dev/null || echo 0); n=\$((n+1)); echo "\$n" > "$TEST_TMP/n"
+    if [ "\$n" -eq 1 ]; then echo "ERROR 2002 (HY000): Can't connect" >&2; exit 1; fi
+    exit 0 ;;
+  *) exit 0 ;;
+esac
+EOF
+  chmod +x "$STUBS/docker"
+  DEVENV_INIT_RETRY_DELAY=0 run bash "$ROOT/bin/devenv" services init mysql myapp
+  [ "$status" -eq 0 ]
+  [ "$(cat "$TEST_TMP/n")" -ge 2 ]
+}
+
+@test "services init gives up after exhausting retries" {
+  cat > "$STUBS/docker" <<EOF
+#!/usr/bin/env bash
+case " \$* " in
+  *" exec "*) echo "ERROR 2002" >&2; exit 1 ;;
+  *) exit 0 ;;
+esac
+EOF
+  chmod +x "$STUBS/docker"
+  DEVENV_INIT_RETRY_DELAY=0 DEVENV_INIT_RETRIES=3 run bash "$ROOT/bin/devenv" services init postgres myapp
+  [ "$status" -ne 0 ]
+}
+
 @test "services nuke without --yes exits 2" {
   run bash "$ROOT/bin/devenv" services nuke
   [ "$status" -eq 2 ]

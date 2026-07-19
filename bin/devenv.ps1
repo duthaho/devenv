@@ -37,6 +37,22 @@ $script:AllProfileFlags = @('--profile','default','--profile','aws','--profile',
 
 function Invoke-ComposeAll { param([string[]]$Argv) Invoke-Compose -Argv ($script:AllProfileFlags + $Argv) }
 
+# Run $Action, retrying while it exits non-zero. Rides over a just-started
+# service that isn't accepting connections yet (e.g. the MySQL init/restart gap
+# right after it reports healthy). Exits the CLI non-zero if all attempts fail.
+function Invoke-DevenvRetry {
+    param([int]$Attempts, [double]$Delay, [scriptblock]$Action)
+    for ($i = 1; $i -le $Attempts; $i++) {
+        & $Action
+        if ($LASTEXITCODE -eq 0) { return }
+        if ($i -lt $Attempts) {
+            Write-DevenvWarn "attempt $i/$Attempts failed; retrying in ${Delay}s..."
+            Start-Sleep -Seconds $Delay
+        }
+    }
+    exit $LASTEXITCODE
+}
+
 # Render a SERVICE/STATE/READY table from `docker compose ps --format json`.
 # READY = Docker health when a healthcheck exists, else 'no-probe' when running,
 # else the raw non-running state. Exits non-zero if any service is not ready.
@@ -95,9 +111,11 @@ function Invoke-Services {
             if ($tail.Length -lt 2) { Write-DevenvError 'services init <svc> <project>'; exit 2 }
             $svc = $tail[0]; $proj = $tail[1]
             $db = Get-DevenvDbForProject $proj
+            $rtries = if ($env:DEVENV_INIT_RETRIES) { [int]$env:DEVENV_INIT_RETRIES } else { 10 }
+            $rdelay = if ($env:DEVENV_INIT_RETRY_DELAY) { [double]$env:DEVENV_INIT_RETRY_DELAY } else { 2 }
             switch ($svc) {
-                'postgres'   { Invoke-Compose @('exec','-T','postgres','psql','-U','dev','-d','dev','-c',"CREATE DATABASE $db;") }
-                'mysql'      { Invoke-Compose @('exec','-T','mysql','mysql','-u','root','-pdev','-e',"CREATE DATABASE IF NOT EXISTS $db;") }
+                'postgres'   { Invoke-DevenvRetry $rtries $rdelay { Invoke-Compose @('exec','-T','postgres','psql','-U','dev','-d','dev','-c',"CREATE DATABASE $db;") } }
+                'mysql'      { Invoke-DevenvRetry $rtries $rdelay { Invoke-Compose @('exec','-T','mysql','mysql','-u','root','-pdev','-e',"CREATE DATABASE IF NOT EXISTS $db;") } }
                 'minio'      { Invoke-Compose @('exec','-T','minio','sh','-c',"mc alias set local http://localhost:9000 dev devsecret >`$null && mc mb -p local/$proj-dev") }
                 'opensearch' { Invoke-Compose @('exec','-T','opensearch','curl','-fsS','-X','PUT',"http://localhost:9200/$db") }
                 default { Write-DevenvError "init: unsupported service '$svc' (supported: postgres, mysql, minio, opensearch)"; exit 2 }
