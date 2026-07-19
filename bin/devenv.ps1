@@ -53,7 +53,8 @@ function Invoke-ServicesStatus {
         Write-DevenvInfo 'No services running.'
         exit 0
     }
-    Write-Output ('{0,-20} {1,-12} {2,-10}' -f 'SERVICE','STATE','READY')
+    $useColor = -not [Console]::IsOutputRedirected
+    Write-Output ('{0,-20} {1,-12} {2}' -f 'SERVICE','STATE','READY')
     $rc = 0
     foreach ($line in $lines) {
         $obj = $line | ConvertFrom-Json
@@ -61,7 +62,13 @@ function Invoke-ServicesStatus {
         $health = if ($obj.PSObject.Properties.Name -contains 'Health') { [string]$obj.Health } else { '' }
         $ready = if ($health) { $health } elseif ($state -eq 'running') { 'no-probe' } else { $state }
         if ($ready -ne 'healthy' -and $ready -ne 'no-probe') { $rc = 1 }
-        Write-Output ('{0,-20} {1,-12} {2,-10}' -f [string]$obj.Service, $state, $ready)
+        $cell = $ready
+        if ($useColor) {
+            $code = switch ($ready) { 'healthy' {32} 'starting' {33} 'no-probe' {2} default {31} }
+            $esc = [char]27
+            $cell = "$esc[${code}m$ready$esc[0m"
+        }
+        Write-Output ('{0,-20} {1,-12} {2}' -f [string]$obj.Service, $state, $cell)
     }
     exit $rc
 }

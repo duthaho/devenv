@@ -84,8 +84,9 @@ cmd_services_status() {
     log_info "No services running."
     return 0
   fi
-  printf '%-20s %-12s %-10s\n' SERVICE STATE READY
-  local svc state health ready rc=0
+  local color=""; [ -t 1 ] && color=1
+  printf '%-20s %-12s %s\n' SERVICE STATE READY
+  local svc state health ready rc=0 c reset
   while IFS=$'\t' read -r svc state health; do
     [ -z "$svc" ] && continue
     if [ -n "$health" ]; then
@@ -99,7 +100,17 @@ cmd_services_status() {
       healthy|no-probe) ;;
       *) rc=1 ;;
     esac
-    printf '%-20s %-12s %-10s\n' "$svc" "$state" "$ready"
+    c=""; reset=""
+    if [ -n "$color" ]; then
+      reset=$'\033[0m'
+      case "$ready" in
+        healthy)  c=$'\033[32m' ;;
+        starting) c=$'\033[33m' ;;
+        no-probe) c=$'\033[2m'  ;;
+        *)        c=$'\033[31m' ;;
+      esac
+    fi
+    printf '%-20s %-12s %s%s%s\n' "$svc" "$state" "$c" "$ready" "$reset"
   done < <(printf '%s\n' "$json" | jq -r '[.Service, .State, (.Health // "")] | @tsv')
   return "$rc"
 }
