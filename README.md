@@ -28,9 +28,20 @@ The installer clones `devenv` to `~/.local/share/devenv` (Unix) or `%LOCALAPPDAT
 devenv up                       re-run bootstrap (idempotent)
 devenv up --only 10-1password   run just this module
 devenv up --force               ignore .done markers
+devenv up --reconfigure         reopen the first-run menu (pick optional modules + languages)
 devenv doctor                   cross-platform Environment health summary + per-module checks
 devenv help                     usage
 ```
+
+On a **fresh** machine (no `.done` markers) an interactive `devenv up` opens a
+curated `gum` checklist to pick which **optional modules** (`50-ide`,
+`60-claude`, `70-repos`, `80-gui`) and which **language toolchains** (the
+`[tools]` in `30-toolchains`) to install — pre-ticked with today's defaults, so
+just pressing enter reproduces the standard install. The menu is skipped under
+`--non-interactive`, in CI, when there's no TTY, or when `gum` is missing.
+Re-open it any time with `devenv up --reconfigure`. The choice applies to that
+run only (nothing is persisted): an unchecked module simply isn't installed
+now, and a later plain `devenv up` will still pick it up.
 
 `devenv doctor` leads with an **Environment** section — a cross-platform
 (macOS / Linux / Windows+WSL2) health summary of the host wiring: OS/distro
