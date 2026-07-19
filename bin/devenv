@@ -31,7 +31,7 @@ Commands:
   doctor                   cross-platform environment health + each module's doctor
   services up [profiles..] bring up baseline + named profiles (default if none)
   services down            stop all services
-  services status          list running services
+  services status          list running services + readiness (nonzero exit if any not ready)
   services logs <svc>      tail a service's logs
   services init <svc> <p>  create per-project DB / bucket / index in shared instance
   services nuke --yes      stop services AND wipe all volumes
