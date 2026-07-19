@@ -33,7 +33,9 @@ dsh() {
 @test "devenv_doctor_env prints an os line and returns 0 when no check FAILs" {
   # Deterministic: mise/shims on PATH (shims PASS), OP_MOCK=1 (op PASS); any
   # WARNs (shell-hooks, ssh-agent) must not affect the exit result.
-  run dsh "OSTYPE=darwin23; PATH=$TEST_TMP/x/mise/shims:$PATH; OP_MOCK=1; unset SSH_AUTH_SOCK;" "devenv_doctor_env"
+  # Use /usr/bin (not the host $PATH, whose entries contain spaces on Windows
+  # git-bash and would break the inline `bash -c` env string).
+  run dsh "OSTYPE=darwin23; PATH=$TEST_TMP/x/mise/shims:/usr/bin; OP_MOCK=1; unset SSH_AUTH_SOCK;" "devenv_doctor_env"
   [ "$status" -eq 0 ]
   [[ "$output" == *"os"* ]]
   [[ "$output" == *"PASS"* ]]
@@ -74,6 +76,10 @@ dsh() {
 # --- ssh-agent check ------------------------------------------------------
 
 @test "devenv_dcheck_ssh_agent PASSes when SSH_AUTH_SOCK is a live socket" {
+  case "$OSTYPE" in
+    msys*|cygwin*|win32*) skip "AF_UNIX sockets aren't recognized by test -S under MSYS" ;;
+  esac
+  command -v python3 >/dev/null 2>&1 || skip "python3 not available to create a unix socket"
   python3 -c "import socket,sys; s=socket.socket(socket.AF_UNIX); s.bind(sys.argv[1])" "$TEST_TMP/agent.sock"
   [ -S "$TEST_TMP/agent.sock" ]
   run dsh "OSTYPE=linux-gnu; DEVENV_PROC=/nope; SSH_AUTH_SOCK=$TEST_TMP/agent.sock;" "devenv_dcheck_ssh_agent"
@@ -152,9 +158,10 @@ wsl_env() {
 }
 
 @test "devenv_dcheck_interop WARNs on WSL when no windows interop on PATH" {
-  # Keep the normal PATH (grep is needed for WSL detection); this host has
-  # neither cmd.exe nor powershell.exe, so interop is unreachable.
-  run dsh "$(wsl_env)" "devenv_dcheck_interop"
+  # Constrain PATH to /usr/bin: it has grep (needed for WSL detection) but not
+  # cmd.exe/powershell.exe — on Windows git-bash the host PATH *does* carry
+  # those, which would otherwise flip this to PASS.
+  run dsh "$(wsl_env) PATH=/usr/bin;" "devenv_dcheck_interop"
   [ "$status" -eq 2 ]
   [[ "$output" == WARN* ]]
 }
