@@ -129,6 +129,20 @@ status_stub() {
   [ "$status" -ne 0 ]
 }
 
+@test "services status with no running services exits 0 with a notice" {
+  status_stub 0   # ps succeeds, emits nothing
+  run bash "$ROOT/bin/devenv" services status
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"No services running"* ]]
+}
+
+@test "services status propagates a docker ps failure (not masked as empty)" {
+  status_stub 1   # ps fails, emits nothing
+  run bash "$ROOT/bin/devenv" services status
+  [ "$status" -ne 0 ]
+  [[ "$output" != *"No services running"* ]]
+}
+
 @test "CLI invoked via symlink resolves lib paths correctly" {
   mkdir -p "$TEST_TMP/bin"
   ln -s "$ROOT/bin/devenv" "$TEST_TMP/bin/devenv"
