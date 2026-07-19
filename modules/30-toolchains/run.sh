@@ -61,8 +61,28 @@ write_mise_config() {
     return 0
   fi
   mkdir -p "$(dirname "$cfg")"
-  cp "$HERE/mise.config.toml" "$cfg"
-  log_info "Wrote $cfg"
+  if [ "${DEVENV_LANGS_SET:-0}" = "1" ]; then
+    # The menu chose a language subset (possibly empty). Keep only the [tools]
+    # lines whose key is in DEVENV_LANGS; other sections (comments, [settings])
+    # pass through untouched.
+    awk -v langs=",${DEVENV_LANGS}," '
+      /^\[tools\]/ { intools = 1; print; next }
+      /^\[/        { intools = 0; print; next }
+      {
+        if (intools && $0 ~ /=/) {
+          key = $0
+          sub(/[[:space:]]*=.*$/, "", key)
+          gsub(/[[:space:]]/, "", key)
+          if (key != "" && index(langs, "," key ",") == 0) next
+        }
+        print
+      }
+    ' "$HERE/mise.config.toml" > "$cfg"
+    log_info "Wrote $cfg (languages: $DEVENV_LANGS)"
+  else
+    cp "$HERE/mise.config.toml" "$cfg"
+    log_info "Wrote $cfg"
+  fi
 }
 
 write_direnv_lib() {

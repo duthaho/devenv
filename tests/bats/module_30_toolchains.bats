@@ -56,3 +56,36 @@ EOF
   [ "$status" -eq 0 ]
   [[ "$output" == PASS* ]]
 }
+
+@test "30-toolchains: DEVENV_LANGS filters mise config to chosen tools" {
+  DEVENV_LANGS_SET=1 DEVENV_LANGS="node,go" bash "$ROOT/modules/30-toolchains/run.sh" >/dev/null
+  cfg="$HOME/.config/mise/config.toml"
+  [ -f "$cfg" ]
+  grep -Eq '^node[[:space:]]*=' "$cfg"
+  grep -Eq '^go[[:space:]]*='   "$cfg"
+  # negatives via explicit status (a bare `! grep` is errexit-exempt in bats)
+  run grep -Eq '^python[[:space:]]*=' "$cfg"; [ "$status" -ne 0 ]
+  run grep -Eq '^rust[[:space:]]*='   "$cfg"; [ "$status" -ne 0 ]
+  # non-[tools] sections preserved
+  grep -q '\[settings\]' "$cfg"
+  grep -Eq '^experimental[[:space:]]*=' "$cfg"
+}
+
+@test "30-toolchains: no DEVENV_LANGS_SET keeps the full tool set" {
+  bash "$ROOT/modules/30-toolchains/run.sh" >/dev/null
+  cfg="$HOME/.config/mise/config.toml"
+  for t in node python go rust; do grep -Eq "^$t[[:space:]]*=" "$cfg"; done
+}
+
+@test "30-toolchains: choosing zero languages writes an empty tool set" {
+  # menu ran (flag set) but user unchecked every language
+  DEVENV_LANGS_SET=1 DEVENV_LANGS="" bash "$ROOT/modules/30-toolchains/run.sh" >/dev/null
+  cfg="$HOME/.config/mise/config.toml"
+  [ -f "$cfg" ]
+  # [tools] header + [settings] kept, but no tool lines
+  grep -q '\[tools\]' "$cfg"
+  grep -q '\[settings\]' "$cfg"
+  for t in node python go rust; do
+    run grep -Eq "^$t[[:space:]]*=" "$cfg"; [ "$status" -ne 0 ]
+  done
+}

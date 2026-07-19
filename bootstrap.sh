@@ -8,6 +8,8 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$HERE/lib/os.sh"
 # shellcheck disable=SC1091
 . "$HERE/lib/markers.sh"
+# shellcheck disable=SC1091
+. "$HERE/lib/menu.sh"
 
 usage() {
   cat <<'EOF'
@@ -18,6 +20,7 @@ Flags:
   --skip m1,m2         skip these modules
   --from <name>        run starting from this module
   --force              ignore .done markers; re-run every selected module
+  --reconfigure        (re)open the first-run menu to pick optional modules + languages
   --non-interactive    set DEVENV_NON_INTERACTIVE=1 so prompts auto-default
   -h, --help           print this help and exit
 EOF
@@ -27,17 +30,27 @@ ONLY=""
 SKIP=""
 FROM=""
 FORCE=0
+RECONFIGURE=0
 while [ "$#" -gt 0 ]; do
   case "$1" in
     --only)            ONLY="$2"; shift 2 ;;
     --skip)            SKIP="$2"; shift 2 ;;
     --from)            FROM="$2"; shift 2 ;;
     --force)           FORCE=1; shift ;;
+    --reconfigure)     RECONFIGURE=1; shift ;;
     --non-interactive) export DEVENV_NON_INTERACTIVE=1; shift ;;
     -h|--help)         usage; exit 0 ;;
     *)                 log_err "Unknown flag: $1"; usage; exit 2 ;;
   esac
 done
+
+# First-run (or --reconfigure) curated menu: pick optional modules + languages.
+# Guarded so it stays inert under --non-interactive / CI / no-TTY / no gum.
+if devenv_menu_should_show "$RECONFIGURE"; then
+  if devenv_menu_run "$HERE/modules/30-toolchains/mise.config.toml"; then
+    [ -n "${DEVENV_MENU_SKIP:-}" ] && SKIP="${SKIP:+$SKIP,}$DEVENV_MENU_SKIP"
+  fi
+fi
 
 _in_csv() { local needle="$1" csv="$2"; case ",$csv," in *",$needle,"*) return 0 ;; *) return 1 ;; esac; }
 
