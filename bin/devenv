@@ -17,6 +17,8 @@ ROOT="$(cd "$HERE/.." && pwd)"
 . "$ROOT/lib/log.sh"
 # shellcheck disable=SC1091
 . "$ROOT/lib/docker.sh"
+# shellcheck disable=SC1091
+. "$ROOT/lib/doctor.sh"
 
 cmd="${1:-help}"; shift || true
 
@@ -26,7 +28,7 @@ Usage: devenv <command> [flags]
 
 Commands:
   up [flags]               run the bootstrap orchestrator
-  doctor                   run each module's doctor
+  doctor                   cross-platform environment health + each module's doctor
   services up [profiles..] bring up baseline + named profiles (default if none)
   services down            stop all services
   services status          list running services
@@ -41,16 +43,19 @@ EOF
 
 cmd_up()     { exec bash "$ROOT/bootstrap.sh" "$@"; }
 cmd_doctor() {
-  local rc=0
+  local env_rc=0 mod_rc=0
+  printf 'Environment\n'
+  devenv_doctor_env || env_rc=1
+  printf '\nModules\n'
   for d in "$ROOT"/modules/*/; do
     name="$(basename "${d%/}")"
     if [ -x "$d/doctor.sh" ]; then
-      out="$("$d/doctor.sh" 2>&1)" && printf '%s\n' "[OK]   $name $out" || { printf '%s\n' "[FAIL] $name $out"; rc=1; }
+      out="$("$d/doctor.sh" 2>&1)" && printf '%s\n' "[OK]   $name $out" || { printf '%s\n' "[FAIL] $name $out"; mod_rc=1; }
     else
       printf '%s\n' "[--]   $name (no doctor)"
     fi
   done
-  return $rc
+  [ "$env_rc" -eq 0 ] && [ "$mod_rc" -eq 0 ]
 }
 
 _compose() {
