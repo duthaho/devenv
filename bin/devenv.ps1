@@ -6,6 +6,7 @@ $Here = Split-Path -Parent $MyInvocation.MyCommand.Path
 $Root = (Resolve-Path "$Here/..").Path
 . "$Root/lib/log.ps1"
 . "$Root/lib/docker.ps1"
+. "$Root/lib/doctor.ps1"
 
 $cmd = if ($args.Length -gt 0) { $args[0] } else { 'help' }
 $rest = @()
@@ -17,7 +18,7 @@ Usage: devenv <command> [flags]
 
 Commands:
   up [flags]               run the bootstrap orchestrator
-  doctor                   run each module's doctor
+  doctor                   cross-platform environment health + each module's doctor
   services up [profiles..] bring up baseline + named profiles (default if none)
   services down            stop all services
   services status          list running services
@@ -80,6 +81,13 @@ switch ($cmd) {
     'up'       { & pwsh -NoProfile -File (Join-Path $Root 'bootstrap.ps1') @rest; exit $LASTEXITCODE }
     'doctor'   {
         $rc = 0
+        Write-Output 'Environment'
+        foreach ($c in @(Get-DevenvDoctorEnv)) {
+            Write-Output ("  {0,-5} {1,-11} {2}" -f $c.Status, $c.Name, $c.Detail)
+            if ($c.Status -eq 'FAIL') { $rc = 1 }
+        }
+        Write-Output ''
+        Write-Output 'Modules'
         Get-ChildItem (Join-Path $Root 'modules') -Directory | Sort-Object Name | ForEach-Object {
             $doc = Join-Path $_.FullName 'doctor.ps1'
             if (Test-Path $doc) {

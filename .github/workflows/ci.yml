@@ -82,7 +82,11 @@ jobs:
           git -C tests/fixtures/fake-dotfiles init -q
           git -C tests/fixtures/fake-dotfiles add -A
           git -C tests/fixtures/fake-dotfiles -c user.email=ci@example.com -c user.name=ci commit -q -m fix
-          ./bootstrap.sh --non-interactive
+          # macOS runners have no Docker daemon; 40-docker is covered by the
+          # dedicated docker-smoke job on ubuntu.
+          skip=""
+          [ "${{ matrix.os }}" = "macos-latest" ] && skip="--skip 40-docker"
+          ./bootstrap.sh --non-interactive $skip
 
       - name: Idempotency - second run should be a no-op
         env:
@@ -96,7 +100,9 @@ jobs:
           DEVENV_SKIP_REPO_CLONE: '1'
           DEVENV_SKIP_GUI_INSTALL: '1'
         run: |
-          out=$(./bootstrap.sh --non-interactive 2>&1)
+          skip=""
+          [ "${{ matrix.os }}" = "macos-latest" ] && skip="--skip 40-docker"
+          out=$(./bootstrap.sh --non-interactive $skip 2>&1)
           echo "$out"
           echo "$out" | grep -q "up-to-date (cached)" || { echo 'second run did not hit cache' ; exit 1 ; }
 

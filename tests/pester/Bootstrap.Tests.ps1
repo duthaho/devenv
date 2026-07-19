@@ -19,6 +19,10 @@ Describe 'bootstrap.ps1' {
         $env:DEVENV_ORDER_LOG = $orderLog
         Set-Content -Path (Join-Path $Script:FakeRoot 'modules/00-aaa/run.ps1') -Value 'Add-Content -Path $env:DEVENV_ORDER_LOG -Value "ran 00-aaa"'
         Set-Content -Path (Join-Path $Script:FakeRoot 'modules/10-bbb/run.ps1') -Value 'Add-Content -Path $env:DEVENV_ORDER_LOG -Value "ran 10-bbb"'
+        # bootstrap runs run.sh on Linux/macOS and run.ps1 on Windows — provide
+        # both so this suite exercises the orchestrator on every platform.
+        "#!/usr/bin/env bash`necho 'ran 00-aaa' >> `"`$DEVENV_ORDER_LOG`"" | Set-Content -Path (Join-Path $Script:FakeRoot 'modules/00-aaa/run.sh')
+        "#!/usr/bin/env bash`necho 'ran 10-bbb' >> `"`$DEVENV_ORDER_LOG`"" | Set-Content -Path (Join-Path $Script:FakeRoot 'modules/10-bbb/run.sh')
     }
 
     AfterEach {

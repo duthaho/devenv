@@ -28,9 +28,15 @@ The installer clones `devenv` to `~/.local/share/devenv` (Unix) or `%LOCALAPPDAT
 devenv up                       re-run bootstrap (idempotent)
 devenv up --only 10-1password   run just this module
 devenv up --force               ignore .done markers
-devenv doctor                   per-module health check
+devenv doctor                   cross-platform Environment health summary + per-module checks
 devenv help                     usage
 ```
+
+`devenv doctor` leads with an **Environment** section — a cross-platform
+(macOS / Linux / Windows+WSL2) health summary of the host wiring: OS/distro
+detection, WSL↔Windows interop, `mise`/`direnv` shell hooks, tool shims on
+`PATH`, 1Password reachability, and the SSH agent — each reported `PASS`/`WARN`/`FAIL`
+(only `FAIL` sets a nonzero exit). The per-module checks follow underneath.
 
 ## Modules
 

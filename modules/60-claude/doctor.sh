@@ -12,7 +12,7 @@ fi
 cache="$HOME/.claude/plugins/cache"
 n=0
 if [ -d "$cache" ]; then
-  while IFS= read -r d; do n=$((n+1)); done < <(find "$cache" -mindepth 2 -maxdepth 2 -type d -name '.git' 2>/dev/null)
+  while IFS= read -r _; do n=$((n+1)); done < <(find "$cache" -mindepth 2 -maxdepth 2 -type d -name '.git' 2>/dev/null)
 fi
 parts+=("plugin-packs $n")
 
