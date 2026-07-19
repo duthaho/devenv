@@ -36,8 +36,27 @@ function Write-MiseConfig {
         return
     }
     New-Item -ItemType Directory -Force -Path (Split-Path $cfg -Parent) | Out-Null
-    Copy-Item -Path (Join-Path $Here 'mise.config.toml') -Destination $cfg
-    Write-DevenvInfo "Wrote $cfg"
+    $src = Join-Path $Here 'mise.config.toml'
+    if ($env:DEVENV_LANGS) {
+        # Keep only the [tools] lines whose key is in DEVENV_LANGS; other
+        # sections (comments, [settings]) pass through untouched.
+        $langs = @(($env:DEVENV_LANGS -split ',') | ForEach-Object { $_.Trim() })
+        $inTools = $false
+        $out = foreach ($line in Get-Content -LiteralPath $src) {
+            if ($line -match '^\[tools\]') { $inTools = $true;  $line; continue }
+            if ($line -match '^\[')        { $inTools = $false; $line; continue }
+            if ($inTools -and $line -match '=') {
+                $key = ($line -split '=', 2)[0].Trim()
+                if ($key -and ($key -notin $langs)) { continue }
+            }
+            $line
+        }
+        Set-Content -Path $cfg -Value $out
+        Write-DevenvInfo "Wrote $cfg (languages: $env:DEVENV_LANGS)"
+    } else {
+        Copy-Item -Path $src -Destination $cfg
+        Write-DevenvInfo "Wrote $cfg"
+    }
 }
 
 switch ($os) {
