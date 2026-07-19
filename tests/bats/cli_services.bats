@@ -106,6 +106,29 @@ status_stub() {
   [[ "$output" =~ minio[[:space:]]+running[[:space:]]+starting ]]
 }
 
+@test "services status exits 0 when all services healthy or no-probe" {
+  status_stub 0 \
+    '{"Service":"postgres","State":"running","Health":"healthy"}' \
+    '{"Service":"mailpit","State":"running","Health":""}'
+  run bash "$ROOT/bin/devenv" services status
+  [ "$status" -eq 0 ]
+}
+
+@test "services status exits non-zero when a service is unhealthy" {
+  status_stub 0 \
+    '{"Service":"postgres","State":"running","Health":"healthy"}' \
+    '{"Service":"redis","State":"running","Health":"unhealthy"}'
+  run bash "$ROOT/bin/devenv" services status
+  [ "$status" -ne 0 ]
+}
+
+@test "services status exits non-zero when a service is still starting" {
+  status_stub 0 \
+    '{"Service":"minio","State":"running","Health":"starting"}'
+  run bash "$ROOT/bin/devenv" services status
+  [ "$status" -ne 0 ]
+}
+
 @test "CLI invoked via symlink resolves lib paths correctly" {
   mkdir -p "$TEST_TMP/bin"
   ln -s "$ROOT/bin/devenv" "$TEST_TMP/bin/devenv"

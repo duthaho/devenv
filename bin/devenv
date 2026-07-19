@@ -77,7 +77,7 @@ cmd_services_status() {
   local json
   json="$(_compose_all ps --format json)"
   printf '%-20s %-12s %-10s\n' SERVICE STATE READY
-  local svc state health ready
+  local svc state health ready rc=0
   while IFS=$'\t' read -r svc state health; do
     [ -z "$svc" ] && continue
     if [ -n "$health" ]; then
@@ -87,8 +87,13 @@ cmd_services_status() {
     else
       ready="$state"
     fi
+    case "$ready" in
+      healthy|no-probe) ;;
+      *) rc=1 ;;
+    esac
     printf '%-20s %-12s %-10s\n' "$svc" "$state" "$ready"
   done < <(printf '%s\n' "$json" | jq -r '[.Service, .State, (.Health // "")] | @tsv')
+  return "$rc"
 }
 
 cmd_services() {
