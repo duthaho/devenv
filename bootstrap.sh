@@ -102,7 +102,7 @@ link_cli() {
   fi
   case ":$PATH:" in
     *":$HOME/.local/bin:"*) ;;
-    *) log_warn "~/.local/bin is not on \$PATH. Add: export PATH=\"\$HOME/.local/bin:\$PATH\"" ;;
+    *) log_warn "\$HOME/.local/bin is not on \$PATH. Add: export PATH=\"\$HOME/.local/bin:\$PATH\"" ;;
   esac
 }
 link_cli
