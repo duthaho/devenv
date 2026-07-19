@@ -63,6 +63,21 @@ _compose() {
   docker compose $(devenv_compose_args) "$@"
 }
 
+# _retry <attempts> <delay> <cmd...> — run cmd, retrying on failure. Rides over
+# a just-started service that isn't accepting connections yet (e.g. the MySQL
+# init/restart gap right after it reports healthy).
+_retry() {
+  local attempts="$1" delay="$2"; shift 2
+  local i=1
+  while true; do
+    if "$@"; then return 0; fi
+    [ "$i" -ge "$attempts" ] && return 1
+    log_warn "attempt $i/$attempts failed; retrying in ${delay}s..."
+    sleep "$delay"
+    i=$((i + 1))
+  done
+}
+
 _all_profile_flags="--profile default --profile aws --profile search --profile vectors --profile queues --profile analytics --profile observability --profile alt-db --profile auth"
 
 _compose_all() {
@@ -145,9 +160,10 @@ cmd_services() {
       [ -n "${1:-}" ] && [ -n "${2:-}" ] || { log_err "services init <svc> <project>"; return 2; }
       local svc="$1" proj="$2"
       local db; db="$(devenv_db_for_project "$proj")"
+      local rtries="${DEVENV_INIT_RETRIES:-10}" rdelay="${DEVENV_INIT_RETRY_DELAY:-2}"
       case "$svc" in
-        postgres) _compose exec -T postgres psql -U dev -d dev -c "CREATE DATABASE $db;" ;;
-        mysql)    _compose exec -T mysql mysql -u root -pdev -e "CREATE DATABASE IF NOT EXISTS $db;" ;;
+        postgres) _retry "$rtries" "$rdelay" _compose exec -T postgres psql -U dev -d dev -c "CREATE DATABASE $db;" ;;
+        mysql)    _retry "$rtries" "$rdelay" _compose exec -T mysql mysql -u root -pdev -e "CREATE DATABASE IF NOT EXISTS $db;" ;;
         minio)    _compose exec -T minio sh -c "mc alias set local http://localhost:9000 dev devsecret >/dev/null && mc mb -p local/${proj}-dev" ;;
         opensearch) _compose exec -T opensearch curl -fsS -X PUT "http://localhost:9200/$db" ;;
         *) log_err "init: unsupported service '$svc' (supported: postgres, mysql, minio, opensearch)"; return 2 ;;
