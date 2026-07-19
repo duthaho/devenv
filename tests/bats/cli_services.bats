@@ -143,6 +143,24 @@ status_stub() {
   [[ "$output" != *"No services running"* ]]
 }
 
+# Windows jq writes CRLF; command substitution leaves a stray \r on every line
+# but the last. Simulate it with a jq wrapper that appends \r to each line.
+@test "services status tolerates CRLF in jq output (Windows jq)" {
+  local real_jq; real_jq="$(command -v jq)"
+  status_stub 0 \
+    '{"Service":"postgres","State":"running","Health":"healthy"}' \
+    '{"Service":"mailpit","State":"running","Health":""}'
+  cat > "$STUBS/jq" <<EOF
+#!/usr/bin/env bash
+"$real_jq" "\$@" | sed 's/\$/\r/'
+EOF
+  chmod +x "$STUBS/jq"
+  run bash "$ROOT/bin/devenv" services status
+  [ "$status" -eq 0 ]
+  [[ "$output" =~ postgres[[:space:]]+running[[:space:]]+healthy ]]
+  [[ "$output" =~ mailpit[[:space:]]+running[[:space:]]+no-probe ]]
+}
+
 @test "services status exits non-zero on unparseable docker ps output" {
   status_stub 0 'this is not json'
   run bash "$ROOT/bin/devenv" services status

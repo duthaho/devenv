@@ -91,6 +91,9 @@ cmd_services_status() {
     log_err "failed to parse docker compose ps output"
     return 1
   }
+  # Windows jq emits CRLF; strip stray \r so it can't pollute the READY value
+  # or break the readiness comparison below.
+  rows="${rows//$'\r'/}"
   local color=""; [ -t 1 ] && color=1
   printf '%-20s %-12s %s\n' SERVICE STATE READY
   local svc state health ready rc=0 c reset
