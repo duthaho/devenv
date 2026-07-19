@@ -10,6 +10,7 @@ _setup_fakerepo() {
   cp "$DEVENV_ROOT/lib/markers.sh" "$FAKEROOT/lib/"
   cp "$DEVENV_ROOT/lib/op.sh"      "$FAKEROOT/lib/"
   cp "$DEVENV_ROOT/lib/prompts.sh" "$FAKEROOT/lib/"
+  cp "$DEVENV_ROOT/lib/menu.sh"    "$FAKEROOT/lib/"
   cp "$DEVENV_ROOT/bootstrap.sh"   "$FAKEROOT/"
   chmod +x "$FAKEROOT/bootstrap.sh"
 
@@ -105,4 +106,58 @@ EOF
   [ "$status" -ne 0 ]
   [ -f "$DEVENV_CACHE_DIR/00-aaa.done" ]
   [ ! -f "$DEVENV_CACHE_DIR/10-bbb.done" ]
+}
+
+# --- first-run menu (T3) ---
+
+_add_optional_module() {
+  local m="$1"
+  mkdir -p "$FAKEROOT/modules/$m"
+  cat > "$FAKEROOT/modules/$m/run.sh" <<EOF
+#!/usr/bin/env bash
+echo "ran $m (LANGS=\$DEVENV_LANGS GUI=\${DEVENV_GUI_ENABLED:-unset})" >> "\$TEST_TMP/order.log"
+EOF
+  chmod +x "$FAKEROOT/modules/$m/run.sh"
+}
+
+_gum_stub_dir() {
+  local d="$TEST_TMP/stubs"; mkdir -p "$d"
+  cat > "$d/gum" <<'EOF'
+#!/usr/bin/env bash
+hdr=""; while [ "$#" -gt 0 ]; do case "$1" in --header) hdr="$2"; shift 2;; *) shift;; esac; done
+case "$hdr" in
+  *module*) printf '%s\n' 50-ide ;;
+  *lang*)   printf '%s\n' node go ;;
+esac
+exit 0
+EOF
+  chmod +x "$d/gum"
+  echo "$d"
+}
+
+@test "bootstrap --reconfigure runs the menu and skips unchosen optional modules" {
+  _setup_fakerepo
+  _add_optional_module 50-ide
+  _add_optional_module 80-gui
+  local stubs; stubs="$(_gum_stub_dir)"
+  : > "$TEST_TMP/order.log"
+  run env PATH="$stubs:$PATH" DEVENV_CACHE_DIR="$DEVENV_CACHE_DIR" TEST_TMP="$TEST_TMP" \
+    "$FAKEROOT/bootstrap.sh" --reconfigure
+  [ "$status" -eq 0 ]
+  run cat "$TEST_TMP/order.log"
+  [[ "$output" == *"ran 50-ide"* ]]
+  [[ "$output" != *"ran 80-gui"* ]]
+  [[ "$output" == *"LANGS=node,go"* ]]
+}
+
+@test "bootstrap --non-interactive --reconfigure shows no menu (nothing skipped)" {
+  _setup_fakerepo
+  _add_optional_module 80-gui
+  local stubs; stubs="$(_gum_stub_dir)"
+  : > "$TEST_TMP/order.log"
+  run env PATH="$stubs:$PATH" DEVENV_CACHE_DIR="$DEVENV_CACHE_DIR" TEST_TMP="$TEST_TMP" \
+    "$FAKEROOT/bootstrap.sh" --non-interactive --reconfigure
+  [ "$status" -eq 0 ]
+  run cat "$TEST_TMP/order.log"
+  [[ "$output" == *"ran 80-gui"* ]]
 }
