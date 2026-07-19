@@ -18,6 +18,21 @@ exit /b 0
         $env:PATH = "$script:stubs;$env:PATH"
         $script:cli = Join-Path $env:DEVENV_ROOT 'bin/devenv.ps1'
         $script:log = Join-Path $TestDrive 'calls.log'
+
+        # Rewrite the docker stub to emit JSONL for `ps` and exit with $ExitCode.
+        function Set-StatusStub {
+            param([int]$ExitCode, [string[]]$Lines)
+            $emit = if ($Lines) { ($Lines | ForEach-Object { "echo $_" }) -join "`r`n" } else { '' }
+            @"
+@echo off
+echo docker %* >> "$script:log"
+echo %* | findstr /C:" ps " >nul
+if errorlevel 1 goto end
+$emit
+:end
+exit /b $ExitCode
+"@ | Set-Content -Path (Join-Path $script:stubs 'docker.cmd') -Encoding ASCII
+        }
     }
 
     AfterAll {
@@ -87,5 +102,44 @@ exit /b 0
         foreach ($p in @('default','aws','search','vectors','queues','analytics','observability','alt-db','auth')) {
             $content | Should -Match "--profile $p"
         }
+    }
+
+    It 'services status renders READY table and exits 0 when all ready' -Skip:(-not $IsWindows) {
+        Set-StatusStub -ExitCode 0 -Lines @(
+            '{"Service":"postgres","State":"running","Health":"healthy"}',
+            '{"Service":"mailpit","State":"running","Health":""}'
+        )
+        $out = & pwsh -NoProfile -File $script:cli services status 2>&1
+        $LASTEXITCODE | Should -Be 0
+        $text = ($out -join "`n")
+        $text | Should -Match 'SERVICE'
+        $text | Should -Match 'STATE'
+        $text | Should -Match 'READY'
+        $text | Should -Match 'postgres\s+running\s+healthy'
+        $text | Should -Match 'mailpit\s+running\s+no-probe'
+    }
+
+    It 'services status exits non-zero when a service is not ready' -Skip:(-not $IsWindows) {
+        Set-StatusStub -ExitCode 0 -Lines @(
+            '{"Service":"postgres","State":"running","Health":"healthy"}',
+            '{"Service":"minio","State":"running","Health":"starting"}'
+        )
+        $out = & pwsh -NoProfile -File $script:cli services status 2>&1
+        $LASTEXITCODE | Should -Not -Be 0
+        ($out -join "`n") | Should -Match 'minio\s+running\s+starting'
+    }
+
+    It 'services status with no running services exits 0 with a notice' -Skip:(-not $IsWindows) {
+        Set-StatusStub -ExitCode 0 -Lines @()
+        $out = & pwsh -NoProfile -File $script:cli services status 2>&1
+        $LASTEXITCODE | Should -Be 0
+        ($out -join "`n") | Should -Match 'No services running'
+    }
+
+    It 'services status propagates a docker ps failure' -Skip:(-not $IsWindows) {
+        Set-StatusStub -ExitCode 1 -Lines @()
+        $out = & pwsh -NoProfile -File $script:cli services status 2>&1
+        $LASTEXITCODE | Should -Not -Be 0
+        ($out -join "`n") | Should -Not -Match 'No services running'
     }
 }

@@ -31,7 +31,7 @@ Commands:
   doctor                   cross-platform environment health + each module's doctor
   services up [profiles..] bring up baseline + named profiles (default if none)
   services down            stop all services
-  services status          list running services
+  services status          list running services + readiness (nonzero exit if any not ready)
   services logs <svc>      tail a service's logs
   services init <svc> <p>  create per-project DB / bucket / index in shared instance
   services nuke --yes      stop services AND wipe all volumes
@@ -70,6 +70,61 @@ _compose_all() {
   _compose $_all_profile_flags "$@"
 }
 
+# Render a SERVICE/STATE/READY table from `docker compose ps --format json`.
+# READY = Docker health when a healthcheck exists, else `no-probe` when running,
+# else the raw non-running state.
+cmd_services_status() {
+  local json rc_docker=0
+  json="$(_compose_all ps --format json)" || rc_docker=$?
+  if [ "$rc_docker" -ne 0 ]; then
+    log_err "docker compose ps failed (exit $rc_docker)"
+    return "$rc_docker"
+  fi
+  if [ -z "$json" ]; then
+    log_info "No services running."
+    return 0
+  fi
+  # Parse up front so a jq failure fails loudly instead of being swallowed by
+  # the while-loop's process substitution (which would exit 0, masking it).
+  local rows
+  rows="$(printf '%s\n' "$json" | jq -r '[.Service, .State, (.Health // "")] | @tsv')" || {
+    log_err "failed to parse docker compose ps output"
+    return 1
+  }
+  # Windows jq emits CRLF; strip stray \r so it can't pollute the READY value
+  # or break the readiness comparison below.
+  rows="${rows//$'\r'/}"
+  local color=""; [ -t 1 ] && color=1
+  printf '%-20s %-12s %s\n' SERVICE STATE READY
+  local svc state health ready rc=0 c reset
+  while IFS=$'\t' read -r svc state health; do
+    [ -z "$svc" ] && continue
+    if [ -n "$health" ]; then
+      ready="$health"
+    elif [ "$state" = "running" ]; then
+      ready="no-probe"
+    else
+      ready="$state"
+    fi
+    case "$ready" in
+      healthy|no-probe) ;;
+      *) rc=1 ;;
+    esac
+    c=""; reset=""
+    if [ -n "$color" ]; then
+      reset=$'\033[0m'
+      case "$ready" in
+        healthy)  c=$'\033[32m' ;;
+        starting) c=$'\033[33m' ;;
+        no-probe) c=$'\033[2m'  ;;
+        *)        c=$'\033[31m' ;;
+      esac
+    fi
+    printf '%-20s %-12s %s%s%s\n' "$svc" "$state" "$c" "$ready" "$reset"
+  done <<< "$rows"
+  return "$rc"
+}
+
 cmd_services() {
   local sub="${1:-help}"; shift || true
   case "$sub" in
@@ -81,7 +136,7 @@ cmd_services() {
       _compose "${flags[@]}" up -d
       ;;
     down)   _compose_all down ;;
-    status) _compose_all ps ;;
+    status) cmd_services_status ;;
     logs)
       [ -n "${1:-}" ] || { log_err "services logs <service>"; return 2; }
       _compose logs -f "$1"

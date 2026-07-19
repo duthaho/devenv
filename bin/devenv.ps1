@@ -21,7 +21,7 @@ Commands:
   doctor                   cross-platform environment health + each module's doctor
   services up [profiles..] bring up baseline + named profiles (default if none)
   services down            stop all services
-  services status          list running services
+  services status          list running services + readiness (nonzero exit if any not ready)
   services logs <svc>      tail a service's logs
   services init <svc> <p>  create per-project DB / bucket / index
   services nuke --yes      stop services AND wipe all volumes
@@ -37,6 +37,42 @@ $script:AllProfileFlags = @('--profile','default','--profile','aws','--profile',
 
 function Invoke-ComposeAll { param([string[]]$Argv) Invoke-Compose -Argv ($script:AllProfileFlags + $Argv) }
 
+# Render a SERVICE/STATE/READY table from `docker compose ps --format json`.
+# READY = Docker health when a healthcheck exists, else 'no-probe' when running,
+# else the raw non-running state. Exits non-zero if any service is not ready.
+function Invoke-ServicesStatus {
+    $argv = (Get-DevenvComposeArgs) + $script:AllProfileFlags + @('ps','--format','json')
+    $out = & docker compose @argv
+    $rcDocker = $LASTEXITCODE
+    if ($rcDocker -ne 0) {
+        Write-DevenvError "docker compose ps failed (exit $rcDocker)"
+        exit $rcDocker
+    }
+    $lines = @($out | Where-Object { $_ -and "$_".Trim() })
+    if ($lines.Count -eq 0) {
+        Write-DevenvInfo 'No services running.'
+        exit 0
+    }
+    $useColor = -not [Console]::IsOutputRedirected
+    Write-Output ('{0,-20} {1,-12} {2}' -f 'SERVICE','STATE','READY')
+    $rc = 0
+    foreach ($line in $lines) {
+        $obj = $line | ConvertFrom-Json
+        $state = [string]$obj.State
+        $health = if ($obj.PSObject.Properties.Name -contains 'Health') { [string]$obj.Health } else { '' }
+        $ready = if ($health) { $health } elseif ($state -eq 'running') { 'no-probe' } else { $state }
+        if ($ready -ne 'healthy' -and $ready -ne 'no-probe') { $rc = 1 }
+        $cell = $ready
+        if ($useColor) {
+            $code = switch ($ready) { 'healthy' {32} 'starting' {33} 'no-probe' {2} default {31} }
+            $esc = [char]27
+            $cell = "$esc[${code}m$ready$esc[0m"
+        }
+        Write-Output ('{0,-20} {1,-12} {2}' -f [string]$obj.Service, $state, $cell)
+    }
+    exit $rc
+}
+
 function Invoke-Services {
     param([string[]]$Argv)
     if ($null -eq $Argv) { $Argv = @() }
@@ -50,7 +86,7 @@ function Invoke-Services {
             Invoke-Compose ($flags + @('up','-d'))
         }
         'down'   { Invoke-ComposeAll @('down') }
-        'status' { Invoke-ComposeAll @('ps') }
+        'status' { Invoke-ServicesStatus }
         'logs' {
             if ($tail.Length -lt 1) { Write-DevenvError 'services logs <service>'; exit 2 }
             Invoke-Compose @('logs','-f', $tail[0])

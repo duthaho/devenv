@@ -74,6 +74,99 @@ EOF
   done
 }
 
+# Install a docker stub that emits JSONL for `ps` and exits with $2 for it.
+# Usage: status_stub <exit-code> <jsonl-line> [<jsonl-line> ...]
+status_stub() {
+  local rc="$1"; shift
+  {
+    printf '#!/usr/bin/env bash\n'
+    printf 'for a in "$@"; do\n'
+    printf '  if [ "$a" = ps ]; then\n'
+    local line
+    for line in "$@"; do
+      printf "    printf '%%s\\\\n' %q\n" "$line"
+    done
+    printf '    exit %s\n' "$rc"
+    printf '  fi\n'
+    printf 'done\n'
+    printf 'exit 0\n'
+  } > "$STUBS/docker"
+  chmod +x "$STUBS/docker"
+}
+
+@test "services status renders SERVICE/STATE/READY table with health mapping" {
+  status_stub 0 \
+    '{"Service":"postgres","State":"running","Health":"healthy"}' \
+    '{"Service":"mailpit","State":"running","Health":""}' \
+    '{"Service":"minio","State":"running","Health":"starting"}'
+  run bash "$ROOT/bin/devenv" services status
+  [[ "$output" == *"SERVICE"*"STATE"*"READY"* ]]
+  [[ "$output" =~ postgres[[:space:]]+running[[:space:]]+healthy ]]
+  [[ "$output" =~ mailpit[[:space:]]+running[[:space:]]+no-probe ]]
+  [[ "$output" =~ minio[[:space:]]+running[[:space:]]+starting ]]
+}
+
+@test "services status exits 0 when all services healthy or no-probe" {
+  status_stub 0 \
+    '{"Service":"postgres","State":"running","Health":"healthy"}' \
+    '{"Service":"mailpit","State":"running","Health":""}'
+  run bash "$ROOT/bin/devenv" services status
+  [ "$status" -eq 0 ]
+}
+
+@test "services status exits non-zero when a service is unhealthy" {
+  status_stub 0 \
+    '{"Service":"postgres","State":"running","Health":"healthy"}' \
+    '{"Service":"redis","State":"running","Health":"unhealthy"}'
+  run bash "$ROOT/bin/devenv" services status
+  [ "$status" -ne 0 ]
+}
+
+@test "services status exits non-zero when a service is still starting" {
+  status_stub 0 \
+    '{"Service":"minio","State":"running","Health":"starting"}'
+  run bash "$ROOT/bin/devenv" services status
+  [ "$status" -ne 0 ]
+}
+
+@test "services status with no running services exits 0 with a notice" {
+  status_stub 0   # ps succeeds, emits nothing
+  run bash "$ROOT/bin/devenv" services status
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"No services running"* ]]
+}
+
+@test "services status propagates a docker ps failure (not masked as empty)" {
+  status_stub 1   # ps fails, emits nothing
+  run bash "$ROOT/bin/devenv" services status
+  [ "$status" -ne 0 ]
+  [[ "$output" != *"No services running"* ]]
+}
+
+# Windows jq writes CRLF; command substitution leaves a stray \r on every line
+# but the last. Simulate it with a jq wrapper that appends \r to each line.
+@test "services status tolerates CRLF in jq output (Windows jq)" {
+  local real_jq; real_jq="$(command -v jq)"
+  status_stub 0 \
+    '{"Service":"postgres","State":"running","Health":"healthy"}' \
+    '{"Service":"mailpit","State":"running","Health":""}'
+  cat > "$STUBS/jq" <<EOF
+#!/usr/bin/env bash
+"$real_jq" "\$@" | sed 's/\$/\r/'
+EOF
+  chmod +x "$STUBS/jq"
+  run bash "$ROOT/bin/devenv" services status
+  [ "$status" -eq 0 ]
+  [[ "$output" =~ postgres[[:space:]]+running[[:space:]]+healthy ]]
+  [[ "$output" =~ mailpit[[:space:]]+running[[:space:]]+no-probe ]]
+}
+
+@test "services status exits non-zero on unparseable docker ps output" {
+  status_stub 0 'this is not json'
+  run bash "$ROOT/bin/devenv" services status
+  [ "$status" -ne 0 ]
+}
+
 @test "CLI invoked via symlink resolves lib paths correctly" {
   mkdir -p "$TEST_TMP/bin"
   ln -s "$ROOT/bin/devenv" "$TEST_TMP/bin/devenv"

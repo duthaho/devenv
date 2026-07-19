@@ -86,6 +86,12 @@ devenv services down
 devenv services nuke --yes             # wipe all volumes
 ```
 
+`devenv services status` prints a `SERVICE / STATE / READY` table. `READY`
+reflects each service's Docker healthcheck — `healthy`, `starting`, or
+`unhealthy` — or `no-probe` for a running service that defines no healthcheck.
+The command exits non-zero if any service is `starting`, `unhealthy`, or not
+running (a `no-probe` service passes), so it can gate scripts and wait-loops.
+
 Per-machine extensions: drop a `compose.local.yml` at `~/.devenv/services/compose.local.yml` — it merges on top of the baseline automatically.
 
 ## Development
