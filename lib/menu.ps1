@@ -61,10 +61,12 @@ function Invoke-DevenvMenu {
     param([Parameter(Mandatory)][string]$ConfigPath)
     try {
         $chosenMods = @(Invoke-DevenvGumChoose -Header 'Select optional modules' `
-            -Selected ($script:DevenvMenuModulesDefault -join ',') -Items $script:DevenvMenuModules)
+            -Selected ($script:DevenvMenuModulesDefault -join ',') -Items $script:DevenvMenuModules |
+            ForEach-Object { $_.Trim() } | Where-Object { $_ })
         $langsAll = @(Get-DevenvMenuLangs $ConfigPath)
         $chosenLangs = @(Invoke-DevenvGumChoose -Header 'Select languages (mise)' `
-            -Selected ($langsAll -join ',') -Items $langsAll)
+            -Selected ($langsAll -join ',') -Items $langsAll |
+            ForEach-Object { $_.Trim() } | Where-Object { $_ })
     } catch {
         Write-DevenvWarn "menu: selection cancelled; keeping defaults ($_)"
         return

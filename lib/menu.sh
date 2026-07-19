@@ -73,6 +73,8 @@ devenv_menu_run() {
       skip="${skip:+$skip,}$m"
     fi
   done
+  # Read by bootstrap.sh after sourcing this lib (not used within menu.sh).
+  # shellcheck disable=SC2034
   DEVENV_MENU_SKIP="$skip"
 
   # shellcheck disable=SC2086
@@ -85,8 +87,10 @@ devenv_menu_run() {
   # instead of being mistaken for "menu didn't run" (a non-empty flag also
   # survives Windows, which deletes empty env vars).
   export DEVENV_LANGS_SET=1
+  local langs_csv
   # shellcheck disable=SC2086
-  export DEVENV_LANGS="$(_devenv_words_to_csv $chosen_langs)"
+  langs_csv="$(_devenv_words_to_csv $chosen_langs)"
+  export DEVENV_LANGS="$langs_csv"
 }
 
 # devenv_menu_should_show <reconfigure> — decide whether to present the menu.

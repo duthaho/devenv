@@ -82,9 +82,12 @@ Describe 'bootstrap.ps1' {
         @"
 @echo off
 echo %*| findstr /C:"module" >nul
-if not errorlevel 1 ( echo 50-ide & goto :eof )
+if %errorlevel%==0 echo 50-ide
 echo %*| findstr /C:"language" >nul
-if not errorlevel 1 ( echo node& echo go & goto :eof )
+if %errorlevel%==0 (
+echo node
+echo go
+)
 "@ | Set-Content -Path (Join-Path $stubs 'gum.cmd') -Encoding ASCII
         if ($IsWindows) { } else { & chmod +x (Join-Path $stubs 'gum') }
 
