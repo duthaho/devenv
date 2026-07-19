@@ -84,3 +84,51 @@ dsh() {
   [ "$status" -eq 2 ]
   [[ "$output" == WARN* ]]
 }
+
+# --- shell-hooks check ----------------------------------------------------
+
+@test "devenv_dcheck_shell_hooks PASSes when both hooks present" {
+  mkdir -p "$TEST_TMP/h"
+  printf 'eval "$(mise activate bash)"\neval "$(direnv hook bash)"\n' > "$TEST_TMP/h/.bashrc"
+  run dsh "HOME=$TEST_TMP/h;" "devenv_dcheck_shell_hooks"
+  [ "$status" -eq 0 ]
+  [[ "$output" == PASS* ]]
+}
+
+@test "devenv_dcheck_shell_hooks WARNs when no rc files present" {
+  mkdir -p "$TEST_TMP/h"
+  run dsh "HOME=$TEST_TMP/h;" "devenv_dcheck_shell_hooks"
+  [ "$status" -eq 2 ]
+  [[ "$output" == WARN* ]]
+}
+
+@test "devenv_dcheck_shell_hooks WARN names the missing hook (partial config)" {
+  mkdir -p "$TEST_TMP/h"
+  printf 'eval "$(mise activate bash)"\n' > "$TEST_TMP/h/.bashrc"
+  run dsh "HOME=$TEST_TMP/h;" "devenv_dcheck_shell_hooks"
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"direnv"* ]]
+  [[ "$output" != *"mise+direnv wired"* ]]
+}
+
+# --- shims check ----------------------------------------------------------
+
+@test "devenv_dcheck_shims PASSes when mise/shims is on PATH" {
+  run dsh "PATH=$TEST_TMP/x/mise/shims:$TEST_TMP/empty;" "devenv_dcheck_shims"
+  [ "$status" -eq 0 ]
+  [[ "$output" == PASS* ]]
+}
+
+@test "devenv_dcheck_shims WARNs when mise present but shims not on PATH" {
+  stub_cmd mise 'exit 0'   # mise resolvable via hook path
+  run dsh "" "devenv_dcheck_shims"
+  [ "$status" -eq 2 ]
+  [[ "$output" == WARN* ]]
+}
+
+@test "devenv_dcheck_shims FAILs when mise is not resolvable at all" {
+  mkdir -p "$TEST_TMP/empty"
+  run dsh "PATH=$TEST_TMP/empty;" "devenv_dcheck_shims"
+  [ "$status" -eq 1 ]
+  [[ "$output" == FAIL* ]]
+}

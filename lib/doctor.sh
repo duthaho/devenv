@@ -58,6 +58,47 @@ devenv_dcheck_ssh_agent() {
   esac
 }
 
+# devenv_dcheck_shell_hooks — mise + direnv activation wired into a shell rc.
+# Missing hooks are advisory (WARN): shims on PATH can substitute for them.
+devenv_dcheck_shell_hooks() {
+  local f mise_ok=0 direnv_ok=0 miss=""
+  local files=(
+    "$HOME/.bashrc" "$HOME/.zshrc" "$HOME/.profile"
+    "$HOME/.config/fish/config.fish"
+  )
+  for f in "${files[@]}"; do
+    [ -r "$f" ] || continue
+    grep -q 'mise activate' "$f" 2>/dev/null && mise_ok=1
+    grep -q 'direnv hook'   "$f" 2>/dev/null && direnv_ok=1
+  done
+  if [ "$mise_ok" -eq 1 ] && [ "$direnv_ok" -eq 1 ]; then
+    echo "PASS shell-hooks mise+direnv wired"
+    return 0
+  fi
+  [ "$mise_ok" -eq 0 ] && miss="mise"
+  [ "$direnv_ok" -eq 0 ] && miss="${miss:+$miss+}direnv"
+  echo "WARN shell-hooks missing hook: $miss"
+  return 2
+}
+
+# devenv_dcheck_shims — mise shims directory resolvable on PATH. If shims are
+# absent but mise itself resolves (via an activate hook), that's a WARN; if mise
+# is unreachable entirely, tools won't resolve in a fresh shell — FAIL.
+devenv_dcheck_shims() {
+  case "$PATH" in
+    *mise/shims*|*mise\\shims*)
+      echo "PASS shims mise shims on PATH"
+      return 0
+      ;;
+  esac
+  if command -v mise >/dev/null 2>&1; then
+    echo "WARN shims mise present but shims dir not on PATH (relying on activate hook)"
+    return 2
+  fi
+  echo "FAIL shims mise not resolvable (shims missing, no hook)"
+  return 1
+}
+
 # devenv_doctor_env — run every check in order, print each line indented, and
 # return 1 if any check returned 1 (FAIL), else 0. WARN never fails the result.
 devenv_doctor_env() {
