@@ -30,8 +30,10 @@ dsh() {
 
 # --- aggregator -----------------------------------------------------------
 
-@test "devenv_doctor_env prints an os line and returns 0 when all pass" {
-  run dsh "OSTYPE=darwin23;" "devenv_doctor_env"
+@test "devenv_doctor_env prints an os line and returns 0 when no check FAILs" {
+  # Deterministic: mise/shims on PATH (shims PASS), OP_MOCK=1 (op PASS); any
+  # WARNs (shell-hooks, ssh-agent) must not affect the exit result.
+  run dsh "OSTYPE=darwin23; PATH=$TEST_TMP/x/mise/shims:$PATH; OP_MOCK=1; unset SSH_AUTH_SOCK;" "devenv_doctor_env"
   [ "$status" -eq 0 ]
   [[ "$output" == *"os"* ]]
   [[ "$output" == *"PASS"* ]]
@@ -131,4 +133,50 @@ dsh() {
   run dsh "PATH=$TEST_TMP/empty;" "devenv_dcheck_shims"
   [ "$status" -eq 1 ]
   [[ "$output" == FAIL* ]]
+}
+
+# --- interop check (WSL only) ---------------------------------------------
+
+wsl_env() {
+  mkdir -p "$TEST_TMP/proc"
+  echo 'Linux version 5.15 (microsoft@WSL)' > "$TEST_TMP/proc/version"
+  echo "OSTYPE=linux-gnu; DEVENV_PROC=$TEST_TMP/proc;"
+}
+
+@test "devenv_dcheck_interop PASSes on WSL when cmd.exe is reachable" {
+  stub_cmd cmd.exe 'exit 0'
+  run dsh "$(wsl_env)" "devenv_dcheck_interop"
+  [ "$status" -eq 0 ]
+  [[ "$output" == PASS* ]]
+  [[ "$output" == *"interop"* ]]
+}
+
+@test "devenv_dcheck_interop WARNs on WSL when no windows interop on PATH" {
+  # Keep the normal PATH (grep is needed for WSL detection); this host has
+  # neither cmd.exe nor powershell.exe, so interop is unreachable.
+  run dsh "$(wsl_env)" "devenv_dcheck_interop"
+  [ "$status" -eq 2 ]
+  [[ "$output" == WARN* ]]
+}
+
+@test "devenv_dcheck_interop emits nothing off WSL" {
+  run dsh "OSTYPE=darwin23;" "devenv_dcheck_interop"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}
+
+# --- aggregator FAIL propagation ------------------------------------------
+
+@test "devenv_doctor_env returns 1 when a check FAILs (shims)" {
+  mkdir -p "$TEST_TMP/empty"
+  run dsh "OSTYPE=linux-gnu; DEVENV_PROC=/nope; PATH=$TEST_TMP/empty; OP_MOCK=1; unset SSH_AUTH_SOCK;" "devenv_doctor_env"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL"* ]]
+  [[ "$output" == *"shims"* ]]
+}
+
+@test "devenv_doctor_env prints checks in the spec order" {
+  run dsh "$(wsl_env) OP_MOCK=1;" "devenv_doctor_env"
+  # os first, ssh-agent last; interop present (WSL)
+  [[ "$output" == *"os"*"interop"*"shell-hooks"*"shims"*"op"*"ssh-agent"* ]]
 }

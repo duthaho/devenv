@@ -26,6 +26,18 @@ devenv_dcheck_os() {
   return 0
 }
 
+# devenv_dcheck_interop — WSL↔Windows interop reachable. WSL only; emits
+# nothing (and PASSes) on every other OS.
+devenv_dcheck_interop() {
+  [ "$(devenv_os)" = "wsl" ] || return 0
+  if command -v powershell.exe >/dev/null 2>&1 || command -v cmd.exe >/dev/null 2>&1; then
+    echo "PASS interop windows interop reachable"
+    return 0
+  fi
+  echo "WARN interop no windows interop (cmd.exe/powershell.exe not on PATH)"
+  return 2
+}
+
 # devenv_dcheck_op — 1Password CLI reachability + signed-in state.
 # Reuses op_available/op_signed_in (honor OP_MOCK=1). Not-signed-in is a soft
 # WARN on linux/wsl (per-shell sessions) but a hard FAIL on mac/windows.
@@ -102,7 +114,14 @@ devenv_dcheck_shims() {
 # devenv_doctor_env — run every check in order, print each line indented, and
 # return 1 if any check returned 1 (FAIL), else 0. WARN never fails the result.
 devenv_doctor_env() {
-  local checks=(devenv_dcheck_os)
+  local checks=(
+    devenv_dcheck_os
+    devenv_dcheck_interop
+    devenv_dcheck_shell_hooks
+    devenv_dcheck_shims
+    devenv_dcheck_op
+    devenv_dcheck_ssh_agent
+  )
   local chk line rc worst=0 status name rest
   for chk in "${checks[@]}"; do
     line="$("$chk")"; rc=$?
