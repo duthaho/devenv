@@ -37,6 +37,35 @@ $script:AllProfileFlags = @('--profile','default','--profile','aws','--profile',
 
 function Invoke-ComposeAll { param([string[]]$Argv) Invoke-Compose -Argv ($script:AllProfileFlags + $Argv) }
 
+# Render a SERVICE/STATE/READY table from `docker compose ps --format json`.
+# READY = Docker health when a healthcheck exists, else 'no-probe' when running,
+# else the raw non-running state. Exits non-zero if any service is not ready.
+function Invoke-ServicesStatus {
+    $argv = (Get-DevenvComposeArgs) + $script:AllProfileFlags + @('ps','--format','json')
+    $out = & docker compose @argv
+    $rcDocker = $LASTEXITCODE
+    if ($rcDocker -ne 0) {
+        Write-DevenvError "docker compose ps failed (exit $rcDocker)"
+        exit $rcDocker
+    }
+    $lines = @($out | Where-Object { $_ -and "$_".Trim() })
+    if ($lines.Count -eq 0) {
+        Write-DevenvInfo 'No services running.'
+        exit 0
+    }
+    Write-Output ('{0,-20} {1,-12} {2,-10}' -f 'SERVICE','STATE','READY')
+    $rc = 0
+    foreach ($line in $lines) {
+        $obj = $line | ConvertFrom-Json
+        $state = [string]$obj.State
+        $health = if ($obj.PSObject.Properties.Name -contains 'Health') { [string]$obj.Health } else { '' }
+        $ready = if ($health) { $health } elseif ($state -eq 'running') { 'no-probe' } else { $state }
+        if ($ready -ne 'healthy' -and $ready -ne 'no-probe') { $rc = 1 }
+        Write-Output ('{0,-20} {1,-12} {2,-10}' -f [string]$obj.Service, $state, $ready)
+    }
+    exit $rc
+}
+
 function Invoke-Services {
     param([string[]]$Argv)
     if ($null -eq $Argv) { $Argv = @() }
@@ -50,7 +79,7 @@ function Invoke-Services {
             Invoke-Compose ($flags + @('up','-d'))
         }
         'down'   { Invoke-ComposeAll @('down') }
-        'status' { Invoke-ComposeAll @('ps') }
+        'status' { Invoke-ServicesStatus }
         'logs' {
             if ($tail.Length -lt 1) { Write-DevenvError 'services logs <service>'; exit 2 }
             Invoke-Compose @('logs','-f', $tail[0])
