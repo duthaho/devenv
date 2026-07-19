@@ -9,7 +9,7 @@ Describe 'bootstrap.ps1' {
         New-Item -ItemType Directory -Path (Join-Path $Script:FakeRoot 'lib') | Out-Null
         New-Item -ItemType Directory -Path (Join-Path $Script:FakeRoot 'modules/00-aaa') | Out-Null
         New-Item -ItemType Directory -Path (Join-Path $Script:FakeRoot 'modules/10-bbb') | Out-Null
-        foreach ($f in 'log.ps1','os.ps1','markers.ps1') {
+        foreach ($f in 'log.ps1','os.ps1','markers.ps1','menu.ps1') {
             Copy-Item -Path (Join-Path $env:DEVENV_ROOT "lib/$f") -Destination (Join-Path $Script:FakeRoot "lib/$f")
         }
         Copy-Item -Path (Join-Path $env:DEVENV_ROOT 'bootstrap.ps1') -Destination (Join-Path $Script:FakeRoot 'bootstrap.ps1')
@@ -61,5 +61,44 @@ Describe 'bootstrap.ps1' {
         & pwsh -NoProfile -File (Join-Path $fake 'bootstrap.ps1') -Force
         $lines = Get-Content $log
         $lines.Count | Should -Be 2
+    }
+
+    It '-Reconfigure runs the menu and skips unchosen optional modules' {
+        $fake = Join-Path $env:DEVENV_TEST_SANDBOX 'fakerepo'
+        # optional modules the menu governs (both runners so any OS works)
+        foreach ($m in '50-ide','80-gui') {
+            New-Item -ItemType Directory -Force -Path (Join-Path $fake "modules/$m") | Out-Null
+            Set-Content -Path (Join-Path $fake "modules/$m/run.ps1") -Value "Add-Content -Path `$env:DEVENV_ORDER_LOG -Value `"ran $m LANGS=`$env:DEVENV_LANGS`""
+            "#!/usr/bin/env bash`necho `"ran $m LANGS=`$DEVENV_LANGS`" >> `"`$DEVENV_ORDER_LOG`"" | Set-Content -Path (Join-Path $fake "modules/$m/run.sh")
+        }
+        # a mise.config.toml so the language prompt has items
+        New-Item -ItemType Directory -Force -Path (Join-Path $fake 'modules/30-toolchains') | Out-Null
+        "[tools]`nnode = `"lts`"`ngo = `"1.24`"" | Set-Content -Path (Join-Path $fake 'modules/30-toolchains/mise.config.toml')
+
+        # cross-platform gum stub: choose 50-ide (not 80-gui); langs node,go
+        $stubs = Join-Path $env:DEVENV_TEST_SANDBOX 'stubs'
+        New-Item -ItemType Directory -Force -Path $stubs | Out-Null
+        "#!/usr/bin/env bash`nhdr=`"`$*`"`ncase `"`$hdr`" in *module*) echo 50-ide ;; *language*) printf '%s\n' node go ;; esac" | Set-Content -Path (Join-Path $stubs 'gum')
+        @"
+@echo off
+echo %*| findstr /C:"module" >nul
+if not errorlevel 1 ( echo 50-ide & goto :eof )
+echo %*| findstr /C:"language" >nul
+if not errorlevel 1 ( echo node& echo go & goto :eof )
+"@ | Set-Content -Path (Join-Path $stubs 'gum.cmd') -Encoding ASCII
+        if ($IsWindows) { } else { & chmod +x (Join-Path $stubs 'gum') }
+
+        $sep = [IO.Path]::PathSeparator
+        $origPath = $env:PATH
+        $env:PATH = "$stubs$sep$origPath"
+        try {
+            & pwsh -NoProfile -File (Join-Path $fake 'bootstrap.ps1') -Reconfigure
+            $LASTEXITCODE | Should -Be 0
+        } finally { $env:PATH = $origPath }
+
+        $out = Get-Content (Join-Path $env:DEVENV_TEST_SANDBOX 'order.log') -Raw
+        $out | Should -Match 'ran 50-ide'
+        $out | Should -Not -Match 'ran 80-gui'
+        $out | Should -Match 'LANGS=node,go'
     }
 }

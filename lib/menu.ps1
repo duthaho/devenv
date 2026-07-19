@@ -3,6 +3,7 @@
 
 $script:DevenvMenuModules        = @('50-ide','60-claude','70-repos','80-gui')
 $script:DevenvMenuModulesDefault = @('50-ide','60-claude','70-repos')
+$script:DevenvMenuSkip           = ''
 
 # Get-DevenvMenuLangs <config> — the [tools] keys, in file order.
 function Get-DevenvMenuLangs {
@@ -34,7 +35,10 @@ function Test-DevenvMenuShouldShow {
     if ($env:DEVENV_NON_INTERACTIVE -eq '1') { return $false }
     if (-not (Get-Command gum -ErrorAction SilentlyContinue)) { return $false }
     if ($Reconfigure) { return $true }
-    return [bool](Test-DevenvFirstRun)
+    if (-not (Test-DevenvFirstRun)) { return $false }
+    # First-run auto-show requires an interactive stdin (never in CI / pipes).
+    if ([Console]::IsInputRedirected) { return $false }
+    return $true
 }
 
 # Thin, mockable wrapper over `gum choose`. Throws on a non-zero (cancel) exit.

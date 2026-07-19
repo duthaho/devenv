@@ -4,6 +4,7 @@ param(
     [string]$Skip = '',
     [string]$From = '',
     [switch]$Force,
+    [switch]$Reconfigure,
     [switch]$NonInteractive,
     [switch]$Help
 )
@@ -15,6 +16,7 @@ $Here = Split-Path -Parent $MyInvocation.MyCommand.Path
 . "$Here/lib/log.ps1"
 . "$Here/lib/os.ps1"
 . "$Here/lib/markers.ps1"
+. "$Here/lib/menu.ps1"
 
 function Show-Usage {
 @'
@@ -25,6 +27,7 @@ Flags:
   -Skip "m1,m2"          skip these modules
   -From "name"           run starting from this module
   -Force                 ignore .done markers
+  -Reconfigure           (re)open the first-run menu to pick optional modules + languages
   -NonInteractive        set $env:DEVENV_NON_INTERACTIVE = 1
   -Help                  print this help
 '@
@@ -33,7 +36,15 @@ Flags:
 if ($Help) { Show-Usage; return }
 if ($NonInteractive) { $env:DEVENV_NON_INTERACTIVE = '1' }
 
-function Test-CsvContains { param($Needle, $Csv) return ($Csv -split ',' | Where-Object { $_.Trim() -eq $Needle }).Count -gt 0 }
+function Test-CsvContains { param($Needle, $Csv) return @($Csv -split ',' | Where-Object { $_.Trim() -eq $Needle }).Count -gt 0 }
+
+# First-run (or -Reconfigure) curated menu: pick optional modules + languages.
+if (Test-DevenvMenuShouldShow -Reconfigure:$Reconfigure) {
+    Invoke-DevenvMenu (Join-Path $Here 'modules/30-toolchains/mise.config.toml')
+    if ($script:DevenvMenuSkip) {
+        $Skip = if ($Skip) { "$Skip,$($script:DevenvMenuSkip)" } else { $script:DevenvMenuSkip }
+    }
+}
 
 $os = Get-DevenvOs
 Write-DevenvInfo "devenv bootstrap on $os"
