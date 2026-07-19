@@ -192,15 +192,21 @@ jobs:
           docker compose -f services/compose.yml --profile default up -d
           docker compose -f services/compose.yml --profile default ps
 
-      - name: Wait for health
+      - name: Wait for readiness
         run: |
-          for svc in postgres mysql redis minio; do
-            for i in $(seq 1 30); do
-              health=$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "devenv-$svc-1" 2>/dev/null || echo missing)
-              [ "$health" = healthy ] || [ "$health" = none ] && break
-              sleep 2
-            done
+          # Poll `devenv services status`, which exits non-zero until every
+          # running service is ready. Fail loudly if readiness never arrives
+          # instead of racing the init step below.
+          for i in $(seq 1 60); do
+            if bash bin/devenv services status >/dev/null 2>&1; then
+              bash bin/devenv services status
+              exit 0
+            fi
+            sleep 2
           done
+          echo "::error::services did not become ready within 120s"
+          bash bin/devenv services status || true
+          exit 1
 
       - name: services init postgres + mysql
         run: |
