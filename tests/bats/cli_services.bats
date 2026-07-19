@@ -74,6 +74,38 @@ EOF
   done
 }
 
+# Install a docker stub that emits JSONL for `ps` and exits with $2 for it.
+# Usage: status_stub <exit-code> <jsonl-line> [<jsonl-line> ...]
+status_stub() {
+  local rc="$1"; shift
+  {
+    printf '#!/usr/bin/env bash\n'
+    printf 'for a in "$@"; do\n'
+    printf '  if [ "$a" = ps ]; then\n'
+    local line
+    for line in "$@"; do
+      printf "    printf '%%s\\\\n' %q\n" "$line"
+    done
+    printf '    exit %s\n' "$rc"
+    printf '  fi\n'
+    printf 'done\n'
+    printf 'exit 0\n'
+  } > "$STUBS/docker"
+  chmod +x "$STUBS/docker"
+}
+
+@test "services status renders SERVICE/STATE/READY table with health mapping" {
+  status_stub 0 \
+    '{"Service":"postgres","State":"running","Health":"healthy"}' \
+    '{"Service":"mailpit","State":"running","Health":""}' \
+    '{"Service":"minio","State":"running","Health":"starting"}'
+  run bash "$ROOT/bin/devenv" services status
+  [[ "$output" == *"SERVICE"*"STATE"*"READY"* ]]
+  [[ "$output" =~ postgres[[:space:]]+running[[:space:]]+healthy ]]
+  [[ "$output" =~ mailpit[[:space:]]+running[[:space:]]+no-probe ]]
+  [[ "$output" =~ minio[[:space:]]+running[[:space:]]+starting ]]
+}
+
 @test "CLI invoked via symlink resolves lib paths correctly" {
   mkdir -p "$TEST_TMP/bin"
   ln -s "$ROOT/bin/devenv" "$TEST_TMP/bin/devenv"

@@ -70,6 +70,27 @@ _compose_all() {
   _compose $_all_profile_flags "$@"
 }
 
+# Render a SERVICE/STATE/READY table from `docker compose ps --format json`.
+# READY = Docker health when a healthcheck exists, else `no-probe` when running,
+# else the raw non-running state.
+cmd_services_status() {
+  local json
+  json="$(_compose_all ps --format json)"
+  printf '%-20s %-12s %-10s\n' SERVICE STATE READY
+  local svc state health ready
+  while IFS=$'\t' read -r svc state health; do
+    [ -z "$svc" ] && continue
+    if [ -n "$health" ]; then
+      ready="$health"
+    elif [ "$state" = "running" ]; then
+      ready="no-probe"
+    else
+      ready="$state"
+    fi
+    printf '%-20s %-12s %-10s\n' "$svc" "$state" "$ready"
+  done < <(printf '%s\n' "$json" | jq -r '[.Service, .State, (.Health // "")] | @tsv')
+}
+
 cmd_services() {
   local sub="${1:-help}"; shift || true
   case "$sub" in
@@ -81,7 +102,7 @@ cmd_services() {
       _compose "${flags[@]}" up -d
       ;;
     down)   _compose_all down ;;
-    status) _compose_all ps ;;
+    status) cmd_services_status ;;
     logs)
       [ -n "${1:-}" ] || { log_err "services logs <service>"; return 2; }
       _compose logs -f "$1"
