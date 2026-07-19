@@ -26,6 +26,38 @@ devenv_dcheck_os() {
   return 0
 }
 
+# devenv_dcheck_op — 1Password CLI reachability + signed-in state.
+# Reuses op_available/op_signed_in (honor OP_MOCK=1). Not-signed-in is a soft
+# WARN on linux/wsl (per-shell sessions) but a hard FAIL on mac/windows.
+devenv_dcheck_op() {
+  local os; os="$(devenv_os)"
+  if [ "${OP_MOCK:-0}" != "1" ] && ! op_available; then
+    echo "FAIL op op CLI MISSING"
+    return 1
+  fi
+  if op_signed_in; then
+    echo "PASS op signed-in"
+    return 0
+  fi
+  case "$os" in
+    linux|wsl) echo 'WARN op not-signed-in (run: eval "$(op signin)")'; return 2 ;;
+    *)         echo "FAIL op not-signed-in"; return 1 ;;
+  esac
+}
+
+# devenv_dcheck_ssh_agent — SSH agent socket wired (1Password agent, usually).
+devenv_dcheck_ssh_agent() {
+  local os; os="$(devenv_os)"
+  if [ -n "${SSH_AUTH_SOCK:-}" ] && [ -S "${SSH_AUTH_SOCK}" ]; then
+    echo "PASS ssh-agent agent socket present"
+    return 0
+  fi
+  case "$os" in
+    mac|windows) echo "WARN ssh-agent no agent socket (expected 1Password agent)"; return 2 ;;
+    *)           echo "WARN ssh-agent no agent socket"; return 2 ;;
+  esac
+}
+
 # devenv_doctor_env — run every check in order, print each line indented, and
 # return 1 if any check returned 1 (FAIL), else 0. WARN never fails the result.
 devenv_doctor_env() {

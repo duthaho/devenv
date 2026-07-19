@@ -36,3 +36,51 @@ dsh() {
   [[ "$output" == *"os"* ]]
   [[ "$output" == *"PASS"* ]]
 }
+
+# --- op check -------------------------------------------------------------
+
+@test "devenv_dcheck_op FAILs when op is not installed" {
+  mkdir -p "$TEST_TMP/empty"
+  run dsh "PATH=$TEST_TMP/empty; OSTYPE=linux-gnu; DEVENV_PROC=/nope; OP_MOCK=0;" "devenv_dcheck_op"
+  [ "$status" -eq 1 ]
+  [[ "$output" == FAIL* ]]
+  [[ "$output" == *"MISSING"* ]]
+}
+
+@test "devenv_dcheck_op PASSes under OP_MOCK=1" {
+  mkdir -p "$TEST_TMP/empty"
+  run dsh "PATH=$TEST_TMP/empty; OSTYPE=linux-gnu; DEVENV_PROC=/nope; OP_MOCK=1;" "devenv_dcheck_op"
+  [ "$status" -eq 0 ]
+  [[ "$output" == PASS* ]]
+}
+
+@test "devenv_dcheck_op WARNs on not-signed-in on linux" {
+  stub_cmd op 'exit 1'   # op whoami fails => not signed in
+  run dsh "OSTYPE=linux-gnu; DEVENV_PROC=/nope; OP_MOCK=0;" "devenv_dcheck_op"
+  [ "$status" -eq 2 ]
+  [[ "$output" == WARN* ]]
+  [[ "$output" == *"not-signed-in"* ]]
+}
+
+@test "devenv_dcheck_op FAILs on not-signed-in on mac" {
+  stub_cmd op 'exit 1'
+  run dsh "OSTYPE=darwin23; OP_MOCK=0;" "devenv_dcheck_op"
+  [ "$status" -eq 1 ]
+  [[ "$output" == FAIL* ]]
+}
+
+# --- ssh-agent check ------------------------------------------------------
+
+@test "devenv_dcheck_ssh_agent PASSes when SSH_AUTH_SOCK is a live socket" {
+  python3 -c "import socket,sys; s=socket.socket(socket.AF_UNIX); s.bind(sys.argv[1])" "$TEST_TMP/agent.sock"
+  [ -S "$TEST_TMP/agent.sock" ]
+  run dsh "OSTYPE=linux-gnu; DEVENV_PROC=/nope; SSH_AUTH_SOCK=$TEST_TMP/agent.sock;" "devenv_dcheck_ssh_agent"
+  [ "$status" -eq 0 ]
+  [[ "$output" == PASS* ]]
+}
+
+@test "devenv_dcheck_ssh_agent WARNs when SSH_AUTH_SOCK is unset" {
+  run dsh "OSTYPE=linux-gnu; DEVENV_PROC=/nope; unset SSH_AUTH_SOCK;" "devenv_dcheck_ssh_agent"
+  [ "$status" -eq 2 ]
+  [[ "$output" == WARN* ]]
+}
