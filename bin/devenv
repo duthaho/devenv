@@ -84,6 +84,13 @@ cmd_services_status() {
     log_info "No services running."
     return 0
   fi
+  # Parse up front so a jq failure fails loudly instead of being swallowed by
+  # the while-loop's process substitution (which would exit 0, masking it).
+  local rows
+  rows="$(printf '%s\n' "$json" | jq -r '[.Service, .State, (.Health // "")] | @tsv')" || {
+    log_err "failed to parse docker compose ps output"
+    return 1
+  }
   local color=""; [ -t 1 ] && color=1
   printf '%-20s %-12s %s\n' SERVICE STATE READY
   local svc state health ready rc=0 c reset
@@ -111,7 +118,7 @@ cmd_services_status() {
       esac
     fi
     printf '%-20s %-12s %s%s%s\n' "$svc" "$state" "$c" "$ready" "$reset"
-  done < <(printf '%s\n' "$json" | jq -r '[.Service, .State, (.Health // "")] | @tsv')
+  done <<< "$rows"
   return "$rc"
 }
 

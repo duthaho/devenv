@@ -143,6 +143,12 @@ status_stub() {
   [[ "$output" != *"No services running"* ]]
 }
 
+@test "services status exits non-zero on unparseable docker ps output" {
+  status_stub 0 'this is not json'
+  run bash "$ROOT/bin/devenv" services status
+  [ "$status" -ne 0 ]
+}
+
 @test "CLI invoked via symlink resolves lib paths correctly" {
   mkdir -p "$TEST_TMP/bin"
   ln -s "$ROOT/bin/devenv" "$TEST_TMP/bin/devenv"
