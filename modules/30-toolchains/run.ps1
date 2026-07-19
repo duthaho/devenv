@@ -37,9 +37,10 @@ function Write-MiseConfig {
     }
     New-Item -ItemType Directory -Force -Path (Split-Path $cfg -Parent) | Out-Null
     $src = Join-Path $Here 'mise.config.toml'
-    if ($env:DEVENV_LANGS) {
-        # Keep only the [tools] lines whose key is in DEVENV_LANGS; other
-        # sections (comments, [settings]) pass through untouched.
+    if ($env:DEVENV_LANGS_SET -eq '1') {
+        # The menu chose a language subset (possibly empty). Keep only the
+        # [tools] lines whose key is in DEVENV_LANGS; other sections
+        # (comments, [settings]) pass through untouched.
         $langs = @(($env:DEVENV_LANGS -split ',') | ForEach-Object { $_.Trim() })
         $inTools = $false
         $out = foreach ($line in Get-Content -LiteralPath $src) {

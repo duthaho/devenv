@@ -59,10 +59,11 @@ exit /b 0
     It 'DEVENV_LANGS filters mise config to chosen tools' -Skip:(-not $IsWindows) {
         $cfg = Join-Path $script:fakeHome '.config/mise/config.toml'
         Remove-Item $cfg -Force -ErrorAction SilentlyContinue
+        $env:DEVENV_LANGS_SET = '1'
         $env:DEVENV_LANGS = 'node,go'
         try {
             & pwsh -NoProfile -File (Join-Path $env:DEVENV_ROOT 'modules/30-toolchains/run.ps1') | Out-Null
-        } finally { $env:DEVENV_LANGS = $null }
+        } finally { $env:DEVENV_LANGS = $null; $env:DEVENV_LANGS_SET = $null }
         $raw = Get-Content $cfg -Raw
         $raw | Should -Match 'node\s*='
         $raw | Should -Match 'go\s*='

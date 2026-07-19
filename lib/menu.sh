@@ -80,6 +80,11 @@ devenv_menu_run() {
     export DEVENV_GUI_ENABLED=1
   fi
 
+  # DEVENV_LANGS_SET marks that the menu made a language choice, so a choice of
+  # *no* languages (empty DEVENV_LANGS) still filters to an empty tool set
+  # instead of being mistaken for "menu didn't run" (a non-empty flag also
+  # survives Windows, which deletes empty env vars).
+  export DEVENV_LANGS_SET=1
   # shellcheck disable=SC2086
   export DEVENV_LANGS="$(_devenv_words_to_csv $chosen_langs)"
 }

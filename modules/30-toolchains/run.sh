@@ -61,9 +61,10 @@ write_mise_config() {
     return 0
   fi
   mkdir -p "$(dirname "$cfg")"
-  if [ -n "${DEVENV_LANGS:-}" ]; then
-    # Keep only the [tools] lines whose key is in DEVENV_LANGS; other sections
-    # (comments, [settings]) pass through untouched.
+  if [ "${DEVENV_LANGS_SET:-0}" = "1" ]; then
+    # The menu chose a language subset (possibly empty). Keep only the [tools]
+    # lines whose key is in DEVENV_LANGS; other sections (comments, [settings])
+    # pass through untouched.
     awk -v langs=",${DEVENV_LANGS}," '
       /^\[tools\]/ { intools = 1; print; next }
       /^\[/        { intools = 0; print; next }

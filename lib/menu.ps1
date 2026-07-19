@@ -72,5 +72,8 @@ function Invoke-DevenvMenu {
     $skip = @($script:DevenvMenuModules | Where-Object { $_ -notin $chosenMods })
     $script:DevenvMenuSkip = ($skip -join ',')
     if ('80-gui' -in $chosenMods) { $env:DEVENV_GUI_ENABLED = '1' }
+    # Non-empty flag so "chose no languages" (empty DEVENV_LANGS) still filters
+    # to an empty tool set, and survives Windows deleting empty env vars.
+    $env:DEVENV_LANGS_SET = '1'
     $env:DEVENV_LANGS = ($chosenLangs -join ',')
 }

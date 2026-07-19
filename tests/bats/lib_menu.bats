@@ -88,13 +88,22 @@ EOF
 
 @test "menu_run computes skip set and DEVENV_LANGS from selection" {
   _gum_stub "'50-ide' '70-repos'" "'node' 'go'"
-  unset DEVENV_LANGS DEVENV_GUI_ENABLED DEVENV_MENU_SKIP
+  unset DEVENV_LANGS DEVENV_LANGS_SET DEVENV_GUI_ENABLED DEVENV_MENU_SKIP
   devenv_menu_run "$MISE_CFG"
   [[ ",$DEVENV_MENU_SKIP," == *",60-claude,"* ]]
   [[ ",$DEVENV_MENU_SKIP," == *",80-gui,"* ]]
   [[ ",$DEVENV_MENU_SKIP," != *",50-ide,"* ]]
   [ "$DEVENV_LANGS" = "node,go" ]
+  [ "$DEVENV_LANGS_SET" = "1" ]
   [ -z "${DEVENV_GUI_ENABLED:-}" ]
+}
+
+@test "menu_run marks langs set even when none chosen" {
+  _gum_stub "'50-ide'" ""   # zero languages chosen
+  unset DEVENV_LANGS DEVENV_LANGS_SET DEVENV_GUI_ENABLED DEVENV_MENU_SKIP
+  devenv_menu_run "$MISE_CFG"
+  [ "$DEVENV_LANGS_SET" = "1" ]
+  [ -z "$DEVENV_LANGS" ]
 }
 
 @test "menu_run enables gui when 80-gui chosen" {

@@ -26,6 +26,7 @@ experimental = true
 
     BeforeEach {
         $env:DEVENV_LANGS = $null
+        $env:DEVENV_LANGS_SET = $null
         $env:DEVENV_GUI_ENABLED = $null
         $script:DevenvMenuSkip = $null
     }
@@ -51,7 +52,18 @@ experimental = true
         $script:DevenvMenuSkip | Should -Match '80-gui'
         $script:DevenvMenuSkip | Should -Not -Match '50-ide'
         $env:DEVENV_LANGS | Should -Be 'node,go'
+        $env:DEVENV_LANGS_SET | Should -Be '1'
         [string]::IsNullOrEmpty($env:DEVENV_GUI_ENABLED) | Should -BeTrue
+    }
+
+    It 'Invoke-DevenvMenu marks langs set even when none chosen' {
+        Mock Invoke-DevenvGumChoose {
+            if ($Header -like '*module*') { return @('50-ide') }
+            return @()   # zero languages
+        }
+        Invoke-DevenvMenu $script:cfg
+        $env:DEVENV_LANGS_SET | Should -Be '1'
+        [string]::IsNullOrEmpty($env:DEVENV_LANGS) | Should -BeTrue
     }
 
     It 'Invoke-DevenvMenu enables gui when 80-gui chosen' {
