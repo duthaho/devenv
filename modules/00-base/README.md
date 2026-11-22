@@ -4,11 +4,12 @@ Installs platform package managers and the minimal CLI cluster every later modul
 
 ## What it does
 
-- **macOS:** installs Homebrew if missing; `brew install jq gum`.
-- **Linux (apt):** `sudo apt-get update && sudo apt-get install -y curl git jq` + installs `gum` via the Charm apt repo.
-- **Linux (dnf):** `sudo dnf install -y curl git jq` + Charm rpm repo for `gum`.
-- **Linux (arch):** `sudo pacman -S --needed --noconfirm curl git jq gum`.
-- **Windows:** verifies `winget` is available; `winget install --silent --accept-source-agreements --accept-package-agreements Git.Git GitHub.cli stedolan.jq charmbracelet.gum`.
+- **macOS:** installs Homebrew if missing; installs `jq`, `gum`, and [GitHub CLI](https://cli.github.com/manual/installation) (`gh`) with Homebrew.
+- **Linux (apt):** installs `curl`, `git`, `jq`; installs `gum` from the Charm repo and `gh` from the [official GitHub CLI apt repository](https://github.com/cli/cli/blob/trunk/docs/install_linux.md).
+- **Linux (dnf):** installs `curl`, `git`, `jq`; installs `gum` from the Charm repo and `gh` from the [official GitHub CLI rpm repository](https://github.com/cli/cli/blob/trunk/docs/install_linux.md).
+- **Linux (arch):** installs `curl`, `git`, `jq`, `gum`, and `gh` from official Arch packages.
+- **Windows:** verifies `winget` is available; installs `Git.Git`, `GitHub.cli`, `stedolan.jq`, `charmbracelet.gum`, and the shell productivity bundle.
+- **Shell productivity (default):** installs `fzf`, `ripgrep` (`rg`), `bat`, and `zoxide` from the platform package manager. Set `DEVENV_SKIP_SHELL_PRODUCTIVITY=1` before bootstrap to opt out completely.
 
 ## What it does NOT do
 
@@ -17,7 +18,15 @@ Installs platform package managers and the minimal CLI cluster every later modul
 
 ## Inputs
 
-None.
+- `DEVENV_SKIP_SHELL_PRODUCTIVITY=1` — skip all of `fzf`, `ripgrep`, `bat`, and `zoxide`.
+
+On Debian and Ubuntu the `bat` package provides `batcat`. The module creates
+`/usr/local/bin/bat` pointing to `batcat`, so documentation and shell usage are
+consistent across operating systems.
+
+Bootstrap never logs in to GitHub. `GH_TOKEN` is optional for later `gh` use.
+The module doctor treats missing shell productivity tools as optional and labels
+them `OPTIONAL-MISSING`; a missing `gh` remains a failure.
 
 ## Outputs
 
