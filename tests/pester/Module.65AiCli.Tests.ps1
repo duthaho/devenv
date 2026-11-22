@@ -40,8 +40,9 @@ exit /b 0
         Remove-Item (Join-Path $script:stubs 'node.cmd') -ErrorAction SilentlyContinue
         Remove-Item (Join-Path $script:stubs 'npm.cmd') -ErrorAction SilentlyContinue
         Remove-Item (Join-Path $script:stubs 'codex.cmd') -ErrorAction SilentlyContinue
-        $output = & pwsh -NoProfile -File (Join-Path $env:DEVENV_ROOT 'modules/65-ai-cli/doctor.ps1') 2>&1
-        $LASTEXITCODE | Should -Be 1
+        $env:PATH = "$script:stubs;$env:SystemRoot\System32"
+        $output = & (Join-Path $PSHOME 'pwsh.exe') -NoProfile -File (Join-Path $env:DEVENV_ROOT 'modules/65-ai-cli/doctor.ps1') 2>&1
+        $LASTEXITCODE | Should -Be 0
         $output | Should -Match 'Node MISSING'
     }
 }

@@ -5,6 +5,7 @@ $ErrorActionPreference = 'Stop'
 $Here = Split-Path -Parent $MyInvocation.MyCommand.Path
 $Root = (Resolve-Path "$Here/../..").Path
 . "$Root/lib/log.ps1"
+. "$Root/lib/os.ps1"
 
 function Install-CodexCli {
     if ($env:DEVENV_AI_CLI_ENABLED -ne '1') {

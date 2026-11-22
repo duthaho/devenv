@@ -50,6 +50,13 @@ stub_tool() {
 @test "65-ai-cli doctor: reports missing Node when Codex is absent" {
   stub_tool dirname '/usr/bin/dirname "$@"'
   run env PATH="$STUBS" /usr/bin/bash "$ROOT/modules/65-ai-cli/doctor.sh"
-  [ "$status" -eq 1 ]
+  [ "$status" -eq 0 ]
   [[ "$output" == *"Node MISSING"* ]]
+}
+
+@test "65-ai-cli doctor: passes when the opt-in module is disabled" {
+  unset DEVENV_AI_CLI_ENABLED
+  run env PATH="$STUBS:/usr/bin:/bin" bash "$ROOT/modules/65-ai-cli/doctor.sh"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"opt-in disabled"* ]]
 }

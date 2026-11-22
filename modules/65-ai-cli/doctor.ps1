@@ -10,11 +10,13 @@ if (Get-Command codex -ErrorAction SilentlyContinue) {
     }
 }
 
-if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
-    'FAIL codex MISSING (Node MISSING; install via 30-toolchains)' | Write-Output
+if ($env:DEVENV_AI_CLI_ENABLED -ne '1') {
+    'PASS codex not installed (opt-in disabled; set DEVENV_AI_CLI_ENABLED=1)' | Write-Output
+} elseif (-not (Get-Command node -ErrorAction SilentlyContinue)) {
+    'WARN codex not installed (Node MISSING; install via 30-toolchains)' | Write-Output
 } elseif (-not (Get-Command npm -ErrorAction SilentlyContinue)) {
-    'FAIL codex MISSING (npm MISSING; install Node via 30-toolchains)' | Write-Output
+    'WARN codex not installed (npm MISSING; install Node via 30-toolchains)' | Write-Output
 } else {
-    'FAIL codex MISSING' | Write-Output
+    'WARN codex not installed (opt-in enabled)' | Write-Output
 }
-exit 1
+exit 0
