@@ -19,24 +19,25 @@ Describe 'modules/45-platform-cli PowerShell defaults' {
 Describe 'modules/45-platform-cli/run.ps1 (mocked)' -Tag 'Windows' {
     BeforeAll {
         if (-not $IsWindows) { return }
+        $script:pwshExe = (Get-Command pwsh).Source
         $script:stubs = Join-Path $TestDrive 'stubs'
         New-Item -ItemType Directory -Force -Path $script:stubs | Out-Null
         $script:origPath = $env:PATH
-        $env:PATH = "$script:stubs;$env:PATH"
+        $env:PATH = "$script:stubs;$env:SystemRoot\System32"
     }
 
     BeforeEach {
-        @'
+        @"
 @echo off
-echo winget %* >> "%TESTDRIVE%\calls.log"
-echo @echo off > "%TESTDRIVE%\stubs\kubectl.cmd"
-echo echo clientVersion: v1.34.0 >> "%TESTDRIVE%\stubs\kubectl.cmd"
-echo @echo off > "%TESTDRIVE%\stubs\helm.cmd"
-echo echo v3.17.0 >> "%TESTDRIVE%\stubs\helm.cmd"
-echo @echo off > "%TESTDRIVE%\stubs\tofu.cmd"
-echo echo OpenTofu v1.9.0 >> "%TESTDRIVE%\stubs\tofu.cmd"
+echo winget %* >> "$TestDrive\calls.log"
+echo @echo off > "$script:stubs\kubectl.cmd"
+echo echo clientVersion: v1.34.0 >> "$script:stubs\kubectl.cmd"
+echo @echo off > "$script:stubs\helm.cmd"
+echo echo v3.17.0 >> "$script:stubs\helm.cmd"
+echo @echo off > "$script:stubs\tofu.cmd"
+echo echo OpenTofu v1.9.0 >> "$script:stubs\tofu.cmd"
 exit /b 0
-'@ | Set-Content -Path (Join-Path $script:stubs 'winget.cmd') -Encoding ASCII
+"@ | Set-Content -Path (Join-Path $script:stubs 'winget.cmd') -Encoding ASCII
         $env:DEVENV_PLATFORM_KUBECTL = '1'
         $env:DEVENV_PLATFORM_HELM = '0'
         $env:DEVENV_PLATFORM_OPENTOFU = '0'
@@ -50,7 +51,7 @@ exit /b 0
     }
 
     It 'installs selected kubectl through winget' -Skip:(-not $IsWindows) {
-        & pwsh -NoProfile -File (Join-Path $env:DEVENV_ROOT 'modules/45-platform-cli/run.ps1')
+        & $script:pwshExe -NoProfile -File (Join-Path $env:DEVENV_ROOT 'modules/45-platform-cli/run.ps1')
         $LASTEXITCODE | Should -Be 0
         Get-Content (Join-Path $TestDrive 'calls.log') -Raw | Should -Match 'Kubernetes.kubectl'
     }
@@ -58,7 +59,7 @@ exit /b 0
     It 'installs selected Helm through winget' -Skip:(-not $IsWindows) {
         $env:DEVENV_PLATFORM_KUBECTL = '0'
         $env:DEVENV_PLATFORM_HELM = '1'
-        & pwsh -NoProfile -File (Join-Path $env:DEVENV_ROOT 'modules/45-platform-cli/run.ps1')
+        & $script:pwshExe -NoProfile -File (Join-Path $env:DEVENV_ROOT 'modules/45-platform-cli/run.ps1')
         $LASTEXITCODE | Should -Be 0
         Get-Content (Join-Path $TestDrive 'calls.log') -Raw | Should -Match 'Helm.Helm'
     }
@@ -66,21 +67,21 @@ exit /b 0
     It 'installs selected OpenTofu through winget' -Skip:(-not $IsWindows) {
         $env:DEVENV_PLATFORM_KUBECTL = '0'
         $env:DEVENV_PLATFORM_OPENTOFU = '1'
-        & pwsh -NoProfile -File (Join-Path $env:DEVENV_ROOT 'modules/45-platform-cli/run.ps1')
+        & $script:pwshExe -NoProfile -File (Join-Path $env:DEVENV_ROOT 'modules/45-platform-cli/run.ps1')
         $LASTEXITCODE | Should -Be 0
         Get-Content (Join-Path $TestDrive 'calls.log') -Raw | Should -Match 'OpenTofu.OpenTofu'
     }
 
     It 'skips a selected kubectl install when requested' -Skip:(-not $IsWindows) {
         $env:DEVENV_SKIP_KUBECTL_INSTALL = '1'
-        $output = (& pwsh -NoProfile -File (Join-Path $env:DEVENV_ROOT 'modules/45-platform-cli/run.ps1') 2>&1 | Out-String)
+        $output = (& $script:pwshExe -NoProfile -File (Join-Path $env:DEVENV_ROOT 'modules/45-platform-cli/run.ps1') 2>&1 | Out-String)
         $LASTEXITCODE | Should -Be 0
         $output | Should -Match 'kubectl install skipped'
     }
 
     It 'skips the entire selected module when requested' -Skip:(-not $IsWindows) {
         $env:DEVENV_SKIP_PLATFORM_CLI_INSTALL = '1'
-        $output = (& pwsh -NoProfile -File (Join-Path $env:DEVENV_ROOT 'modules/45-platform-cli/run.ps1') 2>&1 | Out-String)
+        $output = (& $script:pwshExe -NoProfile -File (Join-Path $env:DEVENV_ROOT 'modules/45-platform-cli/run.ps1') 2>&1 | Out-String)
         $LASTEXITCODE | Should -Be 0
         $output | Should -Match 'DEVENV_SKIP_PLATFORM_CLI_INSTALL'
         Remove-Item Env:DEVENV_SKIP_PLATFORM_CLI_INSTALL -ErrorAction SilentlyContinue
@@ -90,7 +91,7 @@ exit /b 0
         $env:DEVENV_PLATFORM_KUBECTL = '0'
         $env:DEVENV_PLATFORM_HELM = '0'
         $env:DEVENV_PLATFORM_OPENTOFU = '0'
-        $output = (& pwsh -NoProfile -File (Join-Path $env:DEVENV_ROOT 'modules/45-platform-cli/doctor.ps1') 2>&1 | Out-String)
+        $output = (& $script:pwshExe -NoProfile -File (Join-Path $env:DEVENV_ROOT 'modules/45-platform-cli/doctor.ps1') 2>&1 | Out-String)
         $LASTEXITCODE | Should -Be 0
         $output | Should -Match 'kubectl not installed \(opt-in disabled'
         $output | Should -Match 'Helm not installed \(opt-in disabled'
