@@ -1,11 +1,14 @@
 #!/usr/bin/env pwsh
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+$Root = (Resolve-Path "$PSScriptRoot/../..").Path
+. "$Root/lib/versions.ps1"
 
 if (Get-Command codex -ErrorAction SilentlyContinue) {
     $version = (& codex --version | Select-Object -First 1)
     if ($LASTEXITCODE -eq 0 -and $version) {
-        "PASS codex $version" | Write-Output
+        $drift = Get-DevenvToolDrift codex $version
+        if ($drift) { "WARN codex $version ($drift)" | Write-Output } else { "PASS codex $version" | Write-Output }
         exit 0
     }
 }

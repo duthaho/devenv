@@ -6,6 +6,7 @@ $Here = Split-Path -Parent $MyInvocation.MyCommand.Path
 $Root = (Resolve-Path "$Here/../..").Path
 . "$Root/lib/log.ps1"
 . "$Root/lib/os.ps1"
+. "$Root/lib/versions.ps1"
 
 function Install-CodexCli {
     if ($env:DEVENV_AI_CLI_ENABLED -ne '1') {
@@ -17,7 +18,10 @@ function Install-CodexCli {
         return
     }
     if (Get-Command codex -ErrorAction SilentlyContinue) {
-        Write-DevenvInfo "codex $((& codex --version | Select-Object -First 1)) already installed"
+        $installed = (& codex --version | Select-Object -First 1)
+        $drift = Get-DevenvToolDrift codex $installed
+        if ($drift) { Write-DevenvWarn "codex $installed; manifest $drift; run: npm install -g $(Get-DevenvNpmSpec codex)" }
+        Write-DevenvInfo "codex $installed already installed"
         return
     }
     if (-not (Get-Command node -ErrorAction SilentlyContinue) -or -not (Get-Command npm -ErrorAction SilentlyContinue)) {
@@ -25,15 +29,18 @@ function Install-CodexCli {
         return
     }
 
-    Write-DevenvInfo 'npm install -g @openai/codex'
-    & npm install -g '@openai/codex'
-    if ($LASTEXITCODE -ne 0) { throw "npm install -g @openai/codex failed (exit $LASTEXITCODE)" }
+    $spec = Get-DevenvNpmSpec codex
+    Write-DevenvInfo "npm install -g $spec"
+    & npm install -g $spec
+    if ($LASTEXITCODE -ne 0) { throw "npm install -g $spec failed (exit $LASTEXITCODE)" }
     Update-DevenvPath
     if (-not (Get-Command codex -ErrorAction SilentlyContinue)) {
         throw "Codex installation completed but 'codex --version' is unavailable. Restart the shell to refresh mise shims, then re-run -Only 65-ai-cli."
     }
     & codex --version | Out-Null
     if ($LASTEXITCODE -ne 0) { throw "Codex installation completed but 'codex --version' failed." }
+    $drift = Get-DevenvToolDrift codex ((& codex --version | Select-Object -First 1))
+    if ($drift) { throw "codex version mismatch: $drift" }
     Write-DevenvInfo "codex $((& codex --version | Select-Object -First 1)) installed"
 }
 

@@ -7,6 +7,7 @@ ROOT="$(cd "$HERE/../.." && pwd)"
 . "$ROOT/lib/log.sh"
 # shellcheck disable=SC1091
 . "$ROOT/lib/os.sh"
+. "$ROOT/lib/versions.sh"
 
 install_wrangler() {
   [ "${DEVENV_CLOUD_WRANGLER:-0}" = "1" ] || return 0
@@ -15,19 +16,27 @@ install_wrangler() {
     return 0
   fi
   if command -v wrangler >/dev/null 2>&1; then
-    log_info "wrangler $(wrangler --version 2>/dev/null | head -n1) already installed"
+    local installed drift
+    installed="$(wrangler --version 2>/dev/null | head -n1)"
+    drift="$(devenv_tool_drift wrangler "$installed")"
+    [ -z "$drift" ] || log_warn "wrangler $installed; manifest $drift; run: npm install -g $(devenv_npm_spec wrangler)"
+    log_info "wrangler $installed already installed"
     return 0
   fi
   if ! command -v node >/dev/null 2>&1 || ! command -v npm >/dev/null 2>&1; then
     log_warn 'Node/npm not on PATH; install Node via 30-toolchains, then re-run --force --only 35-cloud-cli.'
     return 0
   fi
-  log_info 'npm install -g wrangler'
-  npm install -g wrangler >/dev/null
+  local spec
+  spec="$(devenv_npm_spec wrangler)"
+  log_info "npm install -g $spec"
+  npm install -g "$spec" >/dev/null
   if ! command -v wrangler >/dev/null 2>&1 || ! wrangler --version >/dev/null 2>&1; then
     log_err "Wrangler installation completed but 'wrangler --version' is unavailable. Restart the shell to refresh mise shims, then re-run --force --only 35-cloud-cli."
     return 1
   fi
+  drift="$(devenv_tool_drift wrangler "$(wrangler --version 2>/dev/null | head -n1)")"
+  [ -z "$drift" ] || { log_err "wrangler version mismatch: $drift"; return 1; }
   log_info "wrangler $(wrangler --version | head -n1) installed"
 }
 
@@ -102,9 +111,10 @@ install_aws_cli_linux() (
   signature="$archive.sig"
   gpg_home="$tmp_dir/gnupg"
   mkdir -m 700 "$gpg_home"
-  url="https://awscli.amazonaws.com/awscli-exe-linux-${arch}.zip"
+  url="$(devenv_awscli_url "linux-${arch}")"
   log_info "Downloading official AWS CLI v2 bundle for ${arch}"
   curl -fsSL "$url" -o "$archive"
+  devenv_verify_sha256 "$archive" awscli "linux-${arch}"
   curl -fsSL "${url}.sig" -o "$signature"
   gpg --batch --homedir "$gpg_home" --import "$HERE/aws-cli-public-key.asc" >/dev/null 2>&1
   gpg --batch --homedir "$gpg_home" --verify "$signature" "$archive"
@@ -119,7 +129,8 @@ install_aws_cli_macos() (
   pkg_dir="$(mktemp -d)"
   pkg="$pkg_dir/AWSCLIV2.pkg"
   log_info 'Downloading official AWS CLI v2 macOS package'
-  curl -fsSL https://awscli.amazonaws.com/AWSCLIV2.pkg -o "$pkg"
+  curl -fsSL "$(devenv_awscli_url macos)" -o "$pkg"
+  devenv_verify_sha256 "$pkg" awscli macos
   sudo installer -pkg "$pkg" -target /
 )
 
@@ -132,6 +143,9 @@ install_aws_cli() {
   local version
   if version="$(aws_cli_version)"; then
     if [[ "$version" == aws-cli/2.* ]]; then
+      local drift
+      drift="$(devenv_tool_drift awscli "$version")"
+      [ -z "$drift" ] || log_warn "AWS CLI $version; manifest $drift; run: $(devenv_awscli_url linux-x86_64)"
       log_info "AWS CLI $version already installed"
       return 0
     fi
@@ -147,6 +161,8 @@ install_aws_cli() {
     log_err "AWS CLI installation completed but 'aws --version' did not report v2."
     return 1
   fi
+  drift="$(devenv_tool_drift awscli "$version")"
+  [ -z "$drift" ] || { log_err "AWS CLI version mismatch: $drift"; return 1; }
   log_info "AWS CLI $version installed"
 }
 

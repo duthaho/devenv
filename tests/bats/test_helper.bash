@@ -15,7 +15,18 @@ setup() {
 }
 
 teardown() {
+  [ ! -e "$TEST_TMP/network.log" ] || { cat "$TEST_TMP/network.log" >&2; return 1; }
   [ -n "${TEST_TMP:-}" ] && [ -d "$TEST_TMP" ] && rm -rf "$TEST_TMP"
+}
+
+guard_network() {
+  local guard="$TEST_TMP/network-guard" tool
+  mkdir -p "$guard"
+  for tool in curl wget npm brew winget; do
+    printf '#!/usr/bin/env bash\necho "%s $*" >> "$TEST_TMP/network.log"\nexit 97\n' "$tool" > "$guard/$tool"
+    chmod +x "$guard/$tool"
+  done
+  export PATH="$PATH:$guard"
 }
 
 # stub_cmd <name> <body> — prepends a script named <name> to PATH that runs <body>.

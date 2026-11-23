@@ -70,6 +70,7 @@ detection, WSL↔Windows interop, `mise`/`direnv` shell hooks, tool shims on
 | Path                     | Used by    | Purpose                                                          |
 | ------------------------ | ---------- | ---------------------------------------------------------------- |
 | `config/repos.txt`       | `70-repos` | Repos to clone — one per line: `remote [\| path [\| setup-cmd]]` |
+| `config/tool-versions.txt` | CLI modules | Version policy for externally installed CLIs |
 | `config/gui/Brewfile`    | `80-gui`   | GUI casks on macOS/Linux/WSL                                     |
 | `config/gui/winget.json` | `80-gui`   | GUI apps on Windows                                              |
 

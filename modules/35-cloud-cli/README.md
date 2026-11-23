@@ -32,6 +32,14 @@ Each installer first detects an existing executable and verifies its version
 after a new installation. The two installers and their doctor checks are
 separate so another cloud CLI can be added without coupling their behavior.
 
+## Version policy
+
+`config/tool-versions.txt` is the shared source of truth for Wrangler and AWS
+CLI versions. Entries currently use `latest`, preserving the existing install
+commands. To pin AWS CLI, set its exact `X.Y.Z` version and add a lower-case
+SHA-256 for every listed artifact (calculate it with `sha256sum` after
+downloading); the installer verifies it before extraction or execution.
+
 ## Authentication
 
 The bootstrap does not log in, create a tunnel, or write credentials. Configure

@@ -6,6 +6,7 @@ $Here = Split-Path -Parent $MyInvocation.MyCommand.Path
 $Root = (Resolve-Path "$Here/../..").Path
 . "$Root/lib/log.ps1"
 . "$Root/lib/os.ps1"
+. "$Root/lib/versions.ps1"
 
 function Install-Wrangler {
     if ($env:DEVENV_CLOUD_WRANGLER -ne '1') { return }
@@ -14,20 +15,26 @@ function Install-Wrangler {
         return
     }
     if (Get-Command wrangler -ErrorAction SilentlyContinue) {
-        Write-DevenvInfo "wrangler $((& wrangler --version | Select-Object -First 1)) already installed"
+        $installed = (& wrangler --version | Select-Object -First 1)
+        $drift = Get-DevenvToolDrift wrangler $installed
+        if ($drift) { Write-DevenvWarn "wrangler $installed; manifest $drift; run: npm install -g $(Get-DevenvNpmSpec wrangler)" }
+        Write-DevenvInfo "wrangler $installed already installed"
         return
     }
     if (-not (Get-Command node -ErrorAction SilentlyContinue) -or -not (Get-Command npm -ErrorAction SilentlyContinue)) {
         Write-DevenvWarn 'Node/npm not on PATH; install Node via 30-toolchains, then re-run -Force -Only 35-cloud-cli.'
         return
     }
-    Write-DevenvInfo 'npm install -g wrangler'
-    & npm install -g wrangler
-    if ($LASTEXITCODE -ne 0) { throw "npm install -g wrangler failed (exit $LASTEXITCODE)" }
+    $spec = Get-DevenvNpmSpec wrangler
+    Write-DevenvInfo "npm install -g $spec"
+    & npm install -g $spec
+    if ($LASTEXITCODE -ne 0) { throw "npm install -g $spec failed (exit $LASTEXITCODE)" }
     Update-DevenvPath
     if (-not (Get-Command wrangler -ErrorAction SilentlyContinue)) { throw "Wrangler installation completed but 'wrangler --version' is unavailable." }
     & wrangler --version | Out-Null
     if ($LASTEXITCODE -ne 0) { throw "Wrangler installation completed but 'wrangler --version' failed." }
+    $drift = Get-DevenvToolDrift wrangler ((& wrangler --version | Select-Object -First 1))
+    if ($drift) { throw "wrangler version mismatch: $drift" }
     Write-DevenvInfo "wrangler $((& wrangler --version | Select-Object -First 1)) installed"
 }
 
@@ -69,6 +76,8 @@ function Install-AwsCli {
     $version = Get-AwsCliVersion
     if ($version) {
         if ($version -like 'aws-cli/2.*') {
+            $drift = Get-DevenvToolDrift awscli $version
+            if ($drift) { Write-DevenvWarn "AWS CLI $version; manifest $drift; run: $(Get-DevenvAwsCliUrl windows)" }
             Write-DevenvInfo "AWS CLI $version already installed"
             return
         }
@@ -79,7 +88,8 @@ function Install-AwsCli {
     $msi = Join-Path $env:TEMP 'AWSCLIV2.msi'
     try {
         Write-DevenvInfo 'Downloading official AWS CLI v2 Windows MSI'
-        Invoke-WebRequest -Uri 'https://awscli.amazonaws.com/AWSCLIV2.msi' -OutFile $msi
+        Invoke-WebRequest -Uri (Get-DevenvAwsCliUrl windows) -OutFile $msi
+        Test-DevenvSha256 -Path $msi -Tool awscli -Artifact windows
         $process = Start-Process msiexec.exe -ArgumentList @('/i', $msi, '/qn') -Wait -PassThru
         if ($process.ExitCode -ne 0) { throw "AWS CLI v2 MSI installation failed (exit $($process.ExitCode))" }
     } finally {
@@ -88,6 +98,8 @@ function Install-AwsCli {
     Update-DevenvPath
     $version = Get-AwsCliVersion
     if (-not $version -or $version -notlike 'aws-cli/2.*') { throw "AWS CLI installation completed but 'aws --version' did not report v2." }
+    $drift = Get-DevenvToolDrift awscli $version
+    if ($drift) { throw "AWS CLI version mismatch: $drift" }
     Write-DevenvInfo "AWS CLI $version installed"
 }
 

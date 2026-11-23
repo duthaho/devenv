@@ -17,6 +17,19 @@ setup() {
   export DEVENV_CLOUD_WRANGLER=1
   export DEVENV_CLOUD_CLOUDFLARED=1
   export DEVENV_CLOUD_AWS=0
+  guard_network
+}
+
+@test "35-cloud-cli: module passes pinned Wrangler spec to npm" {
+  export DEVENV_CLOUD_CLOUDFLARED=0
+  cp "$ROOT/config/tool-versions.txt" "$TEST_TMP/versions.txt"
+  sed -i 's/wrangler.version=latest/wrangler.version=3.4.5/' "$TEST_TMP/versions.txt"
+  stub_tool node 'exit 0'
+  stub_tool npm 'echo "npm $*" >> "$TEST_TMP/calls.log"; printf "#!/usr/bin/env bash\necho wrangler 3.4.5\n" > "$STUBS/wrangler"; chmod +x "$STUBS/wrangler"'
+  run env DEVENV_TOOL_VERSIONS_FILE="$TEST_TMP/versions.txt" PATH="$STUBS:/usr/bin:/bin" "$BASH_BIN" "$ROOT/modules/35-cloud-cli/run.sh"
+  [ "$status" -eq 0 ]
+  grep -q 'wrangler@3.4.5' "$TEST_TMP/calls.log"
+  [ -z "$(git -C "$ROOT" status --porcelain modules/)" ]
 }
 
 stub_tool() {
@@ -76,7 +89,7 @@ stub_tool() {
 }
 
 @test "35-cloud-cli: AWS Linux installer verifies the signed official bundle" {
-  run grep -F 'awscli-exe-linux-${arch}.zip' "$ROOT/modules/35-cloud-cli/run.sh"
+  run grep -F 'devenv_awscli_url "linux-${arch}"' "$ROOT/modules/35-cloud-cli/run.sh"
   [ "$status" -eq 0 ]
   run grep -F 'gpg --batch --homedir "$gpg_home" --verify "$signature" "$archive"' "$ROOT/modules/35-cloud-cli/run.sh"
   [ "$status" -eq 0 ]
@@ -100,6 +113,39 @@ stub_tool() {
   grep -q -- '--verify' "$TEST_TMP/calls.log"
   grep -q -- '/aws/install --update' "$TEST_TMP/calls.log"
   [[ "$output" == *'AWS CLI aws-cli/2.25.0'* ]]
+}
+
+@test "35-cloud-cli: passes a pinned AWS version URL to curl" {
+  case "${OSTYPE:-}" in msys*|cygwin*|win32*) skip "Linux installer mock: MSYS cannot chmod the gnupg homedir" ;; esac
+  export DEVENV_CLOUD_WRANGLER=0 DEVENV_CLOUD_CLOUDFLARED=0 DEVENV_CLOUD_AWS=1
+  cp "$ROOT/config/tool-versions.txt" "$TEST_TMP/versions.txt"
+  sed -i 's/awscli.version=latest/awscli.version=2.9.9/' "$TEST_TMP/versions.txt"
+  printf '%s\n' 'awscli.sha256.linux-x86_64=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' 'awscli.sha256.linux-aarch64=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' 'awscli.sha256.macos=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' 'awscli.sha256.windows=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' >> "$TEST_TMP/versions.txt"
+  stub_tool uname 'echo x86_64'; stub_tool aws 'exit 127'
+  stub_tool curl 'echo "curl $*" >> "$TEST_TMP/calls.log"; while [ "$#" -gt 0 ]; do [ "$1" = "-o" ] && { shift; : > "$1"; }; shift; done'
+  stub_tool gpg 'exit 0'
+  stub_tool record_aws_install 'printf "%s\\n" "#!/usr/bin/env bash" "echo aws-cli/2.9.9" > "$STUBS/aws"; chmod +x "$STUBS/aws"'
+  stub_tool unzip 'dest=""; while [ "$#" -gt 0 ]; do [ "$1" = "-d" ] && { shift; dest="$1"; }; shift; done; mkdir -p "$dest/aws"; printf "%s\\n" "#!/usr/bin/env bash" "record_aws_install" > "$dest/aws/install"; chmod +x "$dest/aws/install"'
+  stub_tool sudo '"$@"'
+  run env DEVENV_TOOL_VERSIONS_FILE="$TEST_TMP/versions.txt" OSTYPE=linux-gnu PATH="$STUBS:/usr/bin:/bin" "$BASH_BIN" "$ROOT/modules/35-cloud-cli/run.sh"
+  [ "$status" -eq 0 ]
+  grep -q 'awscli-exe-linux-x86_64-2.9.9.zip' "$TEST_TMP/calls.log"
+}
+
+@test "35-cloud-cli: rejects a bad AWS checksum before unpacking or installing" {
+  case "${OSTYPE:-}" in msys*|cygwin*|win32*) skip "Linux installer mock: MSYS cannot chmod the gnupg homedir" ;; esac
+  export DEVENV_CLOUD_WRANGLER=0 DEVENV_CLOUD_CLOUDFLARED=0 DEVENV_CLOUD_AWS=1
+  cp "$ROOT/config/tool-versions.txt" "$TEST_TMP/versions.txt"
+  sed -i 's/awscli.version=latest/awscli.version=2.9.9/' "$TEST_TMP/versions.txt"
+  printf '%s\n' 'awscli.sha256.linux-x86_64=0000000000000000000000000000000000000000000000000000000000000000' 'awscli.sha256.linux-aarch64=0000000000000000000000000000000000000000000000000000000000000000' 'awscli.sha256.macos=0000000000000000000000000000000000000000000000000000000000000000' 'awscli.sha256.windows=0000000000000000000000000000000000000000000000000000000000000000' >> "$TEST_TMP/versions.txt"
+  stub_tool uname 'echo x86_64'; stub_tool aws 'exit 127'
+  stub_tool curl 'echo "curl $*" >> "$TEST_TMP/calls.log"; while [ "$#" -gt 0 ]; do [ "$1" = "-o" ] && { shift; echo "$1" >> "$TEST_TMP/archive-path"; printf bad > "$1"; }; shift; done'
+  stub_tool gpg 'echo gpg >> "$TEST_TMP/calls.log"'; stub_tool unzip 'echo unzip >> "$TEST_TMP/calls.log"'; stub_tool sudo 'echo sudo >> "$TEST_TMP/calls.log"'
+  run env DEVENV_TOOL_VERSIONS_FILE="$TEST_TMP/versions.txt" OSTYPE=linux-gnu PATH="$STUBS:/usr/bin:/bin" "$BASH_BIN" "$ROOT/modules/35-cloud-cli/run.sh"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *'E_BAD_SHA awscli.linux-x86_64'* ]]
+  ! grep -qE '^(gpg|unzip|sudo)' "$TEST_TMP/calls.log" || false
+  [ ! -e "$(head -n1 "$TEST_TMP/archive-path")" ]
 }
 
 @test "35-cloud-cli: stops before AWS installation when Linux signature verification fails" {
