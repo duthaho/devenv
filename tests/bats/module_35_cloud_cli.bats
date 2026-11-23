@@ -124,7 +124,8 @@ stub_tool() {
   stub_tool uname 'echo x86_64'; stub_tool aws 'exit 127'
   stub_tool curl 'echo "curl $*" >> "$TEST_TMP/calls.log"; while [ "$#" -gt 0 ]; do [ "$1" = "-o" ] && { shift; : > "$1"; }; shift; done'
   stub_tool gpg 'exit 0'
-  stub_tool unzip 'dest=""; while [ "$#" -gt 0 ]; do [ "$1" = "-d" ] && { shift; dest="$1"; }; shift; done; mkdir -p "$dest/aws"; printf "#!/usr/bin/env bash\\necho aws-cli/2.9.9\\n" > "$dest/aws/install"; chmod +x "$dest/aws/install"'
+  stub_tool record_aws_install 'printf "%s\\n" "#!/usr/bin/env bash" "echo aws-cli/2.9.9" > "$STUBS/aws"; chmod +x "$STUBS/aws"'
+  stub_tool unzip 'dest=""; while [ "$#" -gt 0 ]; do [ "$1" = "-d" ] && { shift; dest="$1"; }; shift; done; mkdir -p "$dest/aws"; printf "%s\\n" "#!/usr/bin/env bash" "record_aws_install" > "$dest/aws/install"; chmod +x "$dest/aws/install"'
   stub_tool sudo '"$@"'
   run env DEVENV_TOOL_VERSIONS_FILE="$TEST_TMP/versions.txt" OSTYPE=linux-gnu PATH="$STUBS:/usr/bin:/bin" "$BASH_BIN" "$ROOT/modules/35-cloud-cli/run.sh"
   [ "$status" -eq 0 ]

@@ -17,14 +17,14 @@ function Test-DevenvToolVersions {
     foreach ($tool in $entries.Keys) {
         $entry = $entries[$tool]
         foreach ($field in 'module','source','version') { if (-not $entry[$field]) { $errors += "E_MISSING $tool.$field" } }
-        if (-not (Test-Path (Join-Path $script:DevenvVersionsRoot "modules/$($entry.module)"))) { $errors += "E_BAD_MODULE $tool" }
-        if ($entry.source -notin 'npm','release') { $errors += "E_BAD_SOURCE $tool" }
-        if ($entry.source -eq 'npm' -and -not $entry.package) { $errors += "E_MISSING $tool.package" }
-        if ($entry.version -ne 'latest' -and $entry.version -notmatch '^\d+\.\d+\.\d+$') { $errors += "E_BAD_VERSION $tool" }
+        if (-not (Test-Path (Join-Path $script:DevenvVersionsRoot "modules/$($entry['module'])"))) { $errors += "E_BAD_MODULE $tool" }
+        if ($entry['source'] -notin 'npm','release') { $errors += "E_BAD_SOURCE $tool" }
+        if ($entry['source'] -eq 'npm' -and -not $entry['package']) { $errors += "E_MISSING $tool.package" }
+        if ($entry['version'] -ne 'latest' -and $entry['version'] -notmatch '^\d+\.\d+\.\d+$') { $errors += "E_BAD_VERSION $tool" }
         $shaKeys = @($entry.Keys | Where-Object { $_ -like 'sha256.*' })
-        if ($entry.version -eq 'latest' -and $shaKeys.Count) { $errors += "E_SHA_ON_LATEST $tool" }
-        if ($entry.source -eq 'npm' -and $shaKeys.Count) { $errors += "E_SHA_ON_NPM $tool" }
-        if ($entry.source -eq 'release' -and $entry.version -ne 'latest') {
+        if ($entry['version'] -eq 'latest' -and $shaKeys.Count) { $errors += "E_SHA_ON_LATEST $tool" }
+        if ($entry['source'] -eq 'npm' -and $shaKeys.Count) { $errors += "E_SHA_ON_NPM $tool" }
+        if ($entry['source'] -eq 'release' -and $entry['version'] -ne 'latest') {
             foreach ($artifact in 'linux-x86_64','linux-aarch64','macos','windows') {
                 $sha = $entry["sha256.$artifact"]
                 if (-not $sha) { $errors += "E_MISSING_SHA $tool.$artifact" }
