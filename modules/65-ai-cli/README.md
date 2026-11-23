@@ -20,11 +20,11 @@ If Node or npm is unavailable, the module warns and does not install anything.
 
 ## Version policy
 
-This module deliberately follows the npm `latest` stable channel for
-`@openai/codex`; it does not pin a package version. This keeps Codex current
-until the shared external-CLI version manifest is introduced. The module checks
-`codex --version` after a new installation and skips npm entirely when Codex is
-already on `PATH`.
+Version policy lives in the shared `config/tool-versions.txt` manifest. It
+currently uses npm's `latest` stable channel for `@openai/codex`; pinning is a
+single manifest edit to an exact `X.Y.Z` version. The module checks `codex
+--version` after a new installation and skips npm entirely when Codex is already
+on `PATH`.
 
 ## Authentication
 

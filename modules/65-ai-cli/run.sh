@@ -5,6 +5,7 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$HERE/../.." && pwd)"
 # shellcheck disable=SC1091
 . "$ROOT/lib/log.sh"
+. "$ROOT/lib/versions.sh"
 
 install_codex_cli() {
   if [ "${DEVENV_AI_CLI_ENABLED:-0}" != "1" ]; then
@@ -26,8 +27,10 @@ install_codex_cli() {
     return 0
   fi
 
-  log_info "npm install -g @openai/codex"
-  npm install -g @openai/codex >/dev/null
+  local spec
+  spec="$(devenv_npm_spec codex)"
+  log_info "npm install -g $spec"
+  npm install -g "$spec" >/dev/null
   if ! command -v codex >/dev/null 2>&1 || ! codex --version >/dev/null 2>&1; then
     log_err "Codex installation completed but 'codex --version' is unavailable. Restart the shell to refresh mise shims, then re-run --only 65-ai-cli."
     return 1

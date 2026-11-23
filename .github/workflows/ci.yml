@@ -37,6 +37,10 @@ jobs:
           $results | Format-Table
           if ($results | Where-Object Severity -in 'Error','Warning') { exit 1 }
 
+      - name: Tool version manifest
+        shell: bash
+        run: bash -c '. lib/versions.sh && devenv_tool_validate' && pwsh -NoProfile -c '. ./lib/versions.ps1; if (-not (Test-DevenvToolVersions)) { exit 1 }'
+
   test-unix:
     name: test (${{ matrix.os }})
     strategy:
@@ -61,10 +65,22 @@ jobs:
         run: Install-Module Pester -Force -SkipPublisherCheck -MinimumVersion 5.0.0
 
       - name: bats unit tests
+        env:
+          HTTP_PROXY: http://127.0.0.1:9
+          HTTPS_PROXY: http://127.0.0.1:9
+          http_proxy: http://127.0.0.1:9
+          https_proxy: http://127.0.0.1:9
+          NO_PROXY: localhost,127.0.0.1
         run: ./tests/run.sh
 
       - name: Pester unit tests
         shell: pwsh
+        env:
+          HTTP_PROXY: http://127.0.0.1:9
+          HTTPS_PROXY: http://127.0.0.1:9
+          http_proxy: http://127.0.0.1:9
+          https_proxy: http://127.0.0.1:9
+          NO_PROXY: localhost,127.0.0.1
         run: ./tests/run.ps1
 
       - name: Smoke bootstrap (mock op, fake dotfiles)
@@ -132,12 +148,24 @@ jobs:
 
       - name: bats unit tests
         shell: bash
+        env:
+          HTTP_PROXY: http://127.0.0.1:9
+          HTTPS_PROXY: http://127.0.0.1:9
+          http_proxy: http://127.0.0.1:9
+          https_proxy: http://127.0.0.1:9
+          NO_PROXY: localhost,127.0.0.1
         run: |
           export PATH="$HOME/.local/bin:$PATH"
           ./tests/run.sh
 
       - name: Pester unit tests
         shell: pwsh
+        env:
+          HTTP_PROXY: http://127.0.0.1:9
+          HTTPS_PROXY: http://127.0.0.1:9
+          http_proxy: http://127.0.0.1:9
+          https_proxy: http://127.0.0.1:9
+          NO_PROXY: localhost,127.0.0.1
         run: ./tests/run.ps1
 
       - name: Smoke bootstrap (mock op, fake dotfiles)

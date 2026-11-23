@@ -38,7 +38,9 @@ module_sha() {
     echo ""
     return 1
   fi
-  cat -- "${files[@]}" 2>/dev/null | _devenv_sha256
+  local root
+  root="$(cd "$mod/../.." 2>/dev/null; pwd)" || root=""
+  { cat -- "${files[@]}" 2>/dev/null; if [ -n "$root" ] && [ -f "$root/lib/versions.sh" ]; then . "$root/lib/versions.sh"; devenv_tool_manifest_lines "$(basename "$mod")"; fi; } | _devenv_sha256
 }
 
 is_done() {

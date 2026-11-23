@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
+. "$HERE/../../lib/versions.sh"
 
 if command -v codex >/dev/null 2>&1 && version="$(codex --version 2>/dev/null | head -n1)" && [ -n "$version" ]; then
-  printf 'PASS codex %s\n' "$version"
+  drift="$(devenv_tool_drift codex "$version")"; [ -n "$drift" ] && printf 'WARN codex %s (%s)\n' "$version" "$drift" || printf 'PASS codex %s\n' "$version"
   exit 0
 fi
 

@@ -1,0 +1,23 @@
+# External CLI version manifest. Single source of truth for versions that
+# devenv chooses. Format: <tool>.<field>=<value>; '#' comments; blank lines ok.
+# version: 'latest' or exact X.Y.Z. Pinned release tools need sha256 per artifact.
+# Not managed here (OS package repos): gh fzf ripgrep bat zoxide cloudflared.
+
+codex.module=65-ai-cli
+codex.source=npm
+codex.package=@openai/codex
+codex.version=latest
+
+wrangler.module=35-cloud-cli
+wrangler.source=npm
+wrangler.package=wrangler
+wrangler.version=latest
+
+awscli.module=35-cloud-cli
+awscli.source=release
+awscli.version=latest
+# Required only when version is pinned (sha256 of the versioned artifact):
+# awscli.sha256.linux-x86_64=
+# awscli.sha256.linux-aarch64=
+# awscli.sha256.macos=
+# awscli.sha256.windows=

@@ -76,7 +76,7 @@ stub_tool() {
 }
 
 @test "35-cloud-cli: AWS Linux installer verifies the signed official bundle" {
-  run grep -F 'awscli-exe-linux-${arch}.zip' "$ROOT/modules/35-cloud-cli/run.sh"
+  run grep -F 'devenv_awscli_url "linux-${arch}"' "$ROOT/modules/35-cloud-cli/run.sh"
   [ "$status" -eq 0 ]
   run grep -F 'gpg --batch --homedir "$gpg_home" --verify "$signature" "$archive"' "$ROOT/modules/35-cloud-cli/run.sh"
   [ "$status" -eq 0 ]

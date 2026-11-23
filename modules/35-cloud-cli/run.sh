@@ -7,6 +7,7 @@ ROOT="$(cd "$HERE/../.." && pwd)"
 . "$ROOT/lib/log.sh"
 # shellcheck disable=SC1091
 . "$ROOT/lib/os.sh"
+. "$ROOT/lib/versions.sh"
 
 install_wrangler() {
   [ "${DEVENV_CLOUD_WRANGLER:-0}" = "1" ] || return 0
@@ -22,8 +23,10 @@ install_wrangler() {
     log_warn 'Node/npm not on PATH; install Node via 30-toolchains, then re-run --force --only 35-cloud-cli.'
     return 0
   fi
-  log_info 'npm install -g wrangler'
-  npm install -g wrangler >/dev/null
+  local spec
+  spec="$(devenv_npm_spec wrangler)"
+  log_info "npm install -g $spec"
+  npm install -g "$spec" >/dev/null
   if ! command -v wrangler >/dev/null 2>&1 || ! wrangler --version >/dev/null 2>&1; then
     log_err "Wrangler installation completed but 'wrangler --version' is unavailable. Restart the shell to refresh mise shims, then re-run --force --only 35-cloud-cli."
     return 1
@@ -102,9 +105,10 @@ install_aws_cli_linux() (
   signature="$archive.sig"
   gpg_home="$tmp_dir/gnupg"
   mkdir -m 700 "$gpg_home"
-  url="https://awscli.amazonaws.com/awscli-exe-linux-${arch}.zip"
+  url="$(devenv_awscli_url "linux-${arch}")"
   log_info "Downloading official AWS CLI v2 bundle for ${arch}"
   curl -fsSL "$url" -o "$archive"
+  devenv_verify_sha256 "$archive" awscli "linux-${arch}"
   curl -fsSL "${url}.sig" -o "$signature"
   gpg --batch --homedir "$gpg_home" --import "$HERE/aws-cli-public-key.asc" >/dev/null 2>&1
   gpg --batch --homedir "$gpg_home" --verify "$signature" "$archive"
@@ -119,7 +123,8 @@ install_aws_cli_macos() (
   pkg_dir="$(mktemp -d)"
   pkg="$pkg_dir/AWSCLIV2.pkg"
   log_info 'Downloading official AWS CLI v2 macOS package'
-  curl -fsSL https://awscli.amazonaws.com/AWSCLIV2.pkg -o "$pkg"
+  curl -fsSL "$(devenv_awscli_url macos)" -o "$pkg"
+  devenv_verify_sha256 "$pkg" awscli macos
   sudo installer -pkg "$pkg" -target /
 )
 

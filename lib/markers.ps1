@@ -28,6 +28,13 @@ function Get-DevenvModuleSha {
         $bytes = [System.IO.File]::ReadAllBytes($f)
         $combined.Write($bytes, 0, $bytes.Length)
     }
+    $root = Split-Path -Parent (Split-Path -Parent $ModuleDir)
+    $versions = Join-Path $root 'lib/versions.ps1'
+    if (Test-Path $versions) {
+        . $versions
+        $manifest = [Text.Encoding]::UTF8.GetBytes(((Get-DevenvToolManifestLines -Module (Split-Path $ModuleDir -Leaf)) -join ''))
+        $combined.Write($manifest, 0, $manifest.Length)
+    }
     $hash = $sha.ComputeHash($combined.ToArray())
     return ($hash | ForEach-Object { $_.ToString('x2') }) -join ''
 }
