@@ -4,7 +4,7 @@
 
 # Optional modules the menu offers, and the subset pre-ticked by default
 # (80-gui is opt-in today, so it starts unchecked).
-_DEVENV_MENU_MODULES="35-cloud-cli 50-ide 60-claude 65-ai-cli 70-repos 80-gui"
+_DEVENV_MENU_MODULES="35-cloud-cli 45-platform-cli 50-ide 60-claude 65-ai-cli 70-repos 80-gui"
 _DEVENV_MENU_MODULES_DEFAULT="50-ide 60-claude 70-repos"
 
 # devenv_menu_langs_available <mise.config.toml> — print the [tools] keys, one
@@ -101,6 +101,20 @@ devenv_menu_run() {
     if _devenv_in_words "cloudflared" $cloud_tools; then export DEVENV_CLOUD_CLOUDFLARED=1; fi
     # shellcheck disable=SC2086
     if _devenv_in_words "aws" $cloud_tools; then export DEVENV_CLOUD_AWS=1; fi
+  fi
+  # Platform CLIs are separately selectable to keep Kubernetes and IaC tools
+  # off machines that do not use them.
+  # shellcheck disable=SC2086
+  if _devenv_in_words "45-platform-cli" $chosen_mods; then
+    local platform_tools
+    platform_tools="$(gum choose --no-limit --header 'Select platform CLI tools' kubectl helm opentofu)" \
+      || { log_warn 'menu: platform CLI selection cancelled; skipping platform CLIs'; platform_tools=""; }
+    # shellcheck disable=SC2086
+    if _devenv_in_words "kubectl" $platform_tools; then export DEVENV_PLATFORM_KUBECTL=1; fi
+    # shellcheck disable=SC2086
+    if _devenv_in_words "helm" $platform_tools; then export DEVENV_PLATFORM_HELM=1; fi
+    # shellcheck disable=SC2086
+    if _devenv_in_words "opentofu" $platform_tools; then export DEVENV_PLATFORM_OPENTOFU=1; fi
   fi
 
   # DEVENV_LANGS_SET marks that the menu made a language choice, so a choice of

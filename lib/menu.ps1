@@ -1,7 +1,7 @@
 # Curated first-run menu: pick optional modules + language toolchains.
 # Dot-source me. Assumes lib/log.ps1 and lib/markers.ps1 are dot-sourced.
 
-$script:DevenvMenuModules        = @('35-cloud-cli','50-ide','60-claude','65-ai-cli','70-repos','80-gui')
+$script:DevenvMenuModules        = @('35-cloud-cli','45-platform-cli','50-ide','60-claude','65-ai-cli','70-repos','80-gui')
 $script:DevenvMenuModulesDefault = @('50-ide','60-claude','70-repos')
 $script:DevenvMenuSkip           = ''
 
@@ -85,6 +85,17 @@ function Invoke-DevenvMenu {
             if ('aws' -in $cloudTools) { $env:DEVENV_CLOUD_AWS = '1' }
         } catch {
             Write-DevenvWarn "menu: cloud CLI selection cancelled; skipping cloud CLIs ($_)"
+        }
+    }
+    if ('45-platform-cli' -in $chosenMods) {
+        try {
+            $platformTools = @(Invoke-DevenvGumChoose -Header 'Select platform CLI tools' `
+                -Items @('kubectl','helm','opentofu') | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+            if ('kubectl' -in $platformTools) { $env:DEVENV_PLATFORM_KUBECTL = '1' }
+            if ('helm' -in $platformTools) { $env:DEVENV_PLATFORM_HELM = '1' }
+            if ('opentofu' -in $platformTools) { $env:DEVENV_PLATFORM_OPENTOFU = '1' }
+        } catch {
+            Write-DevenvWarn "menu: platform CLI selection cancelled; skipping platform CLIs ($_)"
         }
     }
     # Non-empty flag so "chose no languages" (empty DEVENV_LANGS) still filters

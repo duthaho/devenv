@@ -88,7 +88,7 @@ EOF
 
 @test "menu_run computes skip set and DEVENV_LANGS from selection" {
   _gum_stub "'50-ide' '70-repos'" "'node' 'go'"
-  unset DEVENV_LANGS DEVENV_LANGS_SET DEVENV_GUI_ENABLED DEVENV_AI_CLI_ENABLED DEVENV_CLOUD_WRANGLER DEVENV_CLOUD_CLOUDFLARED DEVENV_MENU_SKIP
+  unset DEVENV_LANGS DEVENV_LANGS_SET DEVENV_GUI_ENABLED DEVENV_AI_CLI_ENABLED DEVENV_CLOUD_WRANGLER DEVENV_CLOUD_CLOUDFLARED DEVENV_PLATFORM_KUBECTL DEVENV_MENU_SKIP
   devenv_menu_run "$MISE_CFG"
   [[ ",$DEVENV_MENU_SKIP," == *",60-claude,"* ]]
   [[ ",$DEVENV_MENU_SKIP," == *",80-gui,"* ]]
@@ -124,6 +124,23 @@ EOF
   [ "$DEVENV_CLOUD_WRANGLER" = "1" ]
   [ -z "${DEVENV_CLOUD_CLOUDFLARED:-}" ]
   [ -z "${DEVENV_CLOUD_AWS:-}" ]
+}
+
+@test "menu_run enables only selected platform CLI tools" {
+  cat > "$STUBS/gum" <<'EOF'
+#!/usr/bin/env bash
+case "$*" in
+  *'Select optional modules'*) printf '%s\n' 45-platform-cli 50-ide ;;
+  *'Select languages'*) printf '%s\n' node ;;
+  *'Select platform CLI tools'*) printf '%s\n' kubectl ;;
+esac
+EOF
+  chmod +x "$STUBS/gum"
+  unset DEVENV_PLATFORM_KUBECTL DEVENV_PLATFORM_HELM DEVENV_PLATFORM_OPENTOFU
+  devenv_menu_run "$MISE_CFG"
+  [ "$DEVENV_PLATFORM_KUBECTL" = "1" ]
+  [ -z "${DEVENV_PLATFORM_HELM:-}" ]
+  [ -z "${DEVENV_PLATFORM_OPENTOFU:-}" ]
 }
 
 @test "menu_run marks langs set even when none chosen" {
