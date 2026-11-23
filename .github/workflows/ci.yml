@@ -78,6 +78,7 @@ jobs:
           DEVENV_CLAUDE_CACHE_DIR: ${{ runner.temp }}/claude-cache
           DEVENV_SKIP_REPO_CLONE: '1'
           DEVENV_SKIP_GUI_INSTALL: '1'
+          DEVENV_SKIP_SHELL_PRODUCTIVITY: '1'
         run: |
           git -C tests/fixtures/fake-dotfiles init -q
           git -C tests/fixtures/fake-dotfiles add -A
@@ -99,6 +100,7 @@ jobs:
           DEVENV_CLAUDE_CACHE_DIR: ${{ runner.temp }}/claude-cache
           DEVENV_SKIP_REPO_CLONE: '1'
           DEVENV_SKIP_GUI_INSTALL: '1'
+          DEVENV_SKIP_SHELL_PRODUCTIVITY: '1'
         run: |
           skip=""
           [ "${{ matrix.os }}" = "macos-latest" ] && skip="--skip 40-docker"
@@ -146,6 +148,7 @@ jobs:
           DEVENV_CLAUDE_CACHE_DIR: ${{ runner.temp }}\claude-cache
           DEVENV_SKIP_REPO_CLONE: '1'
           DEVENV_SKIP_GUI_INSTALL: '1'
+          DEVENV_SKIP_SHELL_PRODUCTIVITY: '1'
         run: |
           git -C tests/fixtures/fake-dotfiles init -q
           git -C tests/fixtures/fake-dotfiles add -A
@@ -164,6 +167,7 @@ jobs:
           DEVENV_CLAUDE_CACHE_DIR: ${{ runner.temp }}\claude-cache
           DEVENV_SKIP_REPO_CLONE: '1'
           DEVENV_SKIP_GUI_INSTALL: '1'
+          DEVENV_SKIP_SHELL_PRODUCTIVITY: '1'
         run: |
           $out = pwsh -NoProfile -File .\bootstrap.ps1 -NonInteractive 2>&1 | Out-String
           Write-Output $out
