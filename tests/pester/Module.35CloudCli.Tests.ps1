@@ -9,6 +9,10 @@ Describe 'modules/35-cloud-cli/run.ps1 (mocked)' -Tag 'Windows' {
 @echo off
 exit /b 0
 '@ | Set-Content -Path (Join-Path $script:stubs 'node.cmd') -Encoding ASCII
+        @'
+@echo off
+exit /b 0
+'@ | Set-Content -Path (Join-Path $script:stubs 'aws.cmd') -Encoding ASCII
         @"
 @echo off
 echo npm %* >> "$TestDrive\calls.log"
