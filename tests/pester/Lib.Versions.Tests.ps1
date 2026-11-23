@@ -28,7 +28,7 @@ Describe 'lib/versions.ps1' {
     It 'parses CRLF manifest identically to Bash' {
         $file = Join-Path $TestDrive 'versions-crlf.txt'
         $content = Get-Content (Join-Path $env:DEVENV_ROOT 'config/tool-versions.txt')
-        [IO.File]::WriteAllLines($file, $content)
+        [IO.File]::WriteAllText($file, (($content -join "`r`n") + "`r`n"))
         $env:DEVENV_TOOL_VERSIONS_FILE = $file
         (Test-DevenvToolVersions) | Should -BeTrue
         (Get-DevenvNpmSpec codex) | Should -Be '@openai/codex'

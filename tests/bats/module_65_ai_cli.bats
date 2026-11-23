@@ -14,6 +14,18 @@ setup() {
   export HEAD_BIN="$(command -v head)"
   export HOME="$TEST_TMP/home"; mkdir -p "$HOME"
   export DEVENV_AI_CLI_ENABLED=1
+  guard_network
+}
+
+@test "65-ai-cli: module passes pinned manifest spec to npm" {
+  cp "$ROOT/config/tool-versions.txt" "$TEST_TMP/versions.txt"
+  sed -i 's/codex.version=latest/codex.version=0.1.2/' "$TEST_TMP/versions.txt"
+  stub_tool node 'exit 0'
+  stub_tool npm 'echo "npm $*" >> "$TEST_TMP/calls.log"; printf "#!/usr/bin/env bash\necho codex 0.1.2\n" > "$STUBS/codex"; chmod +x "$STUBS/codex"'
+  run env DEVENV_TOOL_VERSIONS_FILE="$TEST_TMP/versions.txt" PATH="$STUBS:/usr/bin:/bin" "$BASH_BIN" "$ROOT/modules/65-ai-cli/run.sh"
+  [ "$status" -eq 0 ]
+  grep -q '@openai/codex@0.1.2' "$TEST_TMP/calls.log"
+  [ -z "$(git -C "$ROOT" status --porcelain modules/)" ]
 }
 
 stub_tool() {

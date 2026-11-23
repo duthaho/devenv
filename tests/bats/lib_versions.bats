@@ -1,6 +1,8 @@
 #!/usr/bin/env bats
 load test_helper
 
+setup() { TEST_TMP="$(mktemp -d)"; export TEST_TMP; export DEVENV_CACHE_DIR="$TEST_TMP/cache"; mkdir -p "$DEVENV_CACHE_DIR"; guard_network; }
+
 @test "tool version manifest validates and returns npm specs" {
   run bash -c 'source "$DEVENV_ROOT/lib/versions.sh"; devenv_tool_validate; devenv_npm_spec codex; devenv_npm_spec wrangler'
   [ "$status" -eq 0 ]

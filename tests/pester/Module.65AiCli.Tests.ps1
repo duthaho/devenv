@@ -36,6 +36,17 @@ exit /b 0
         Get-Content (Join-Path $TestDrive 'calls.log') -Raw | Should -Match 'install -g @openai/codex'
     }
 
+    It 'passes a pinned manifest spec to the real module' -Skip:(-not $IsWindows) {
+        $manifest = Join-Path $TestDrive 'versions.txt'
+        (Get-Content (Join-Path $env:DEVENV_ROOT 'config/tool-versions.txt') -Raw).Replace('codex.version=latest','codex.version=0.1.2') | Set-Content $manifest -NoNewline
+        $env:DEVENV_TOOL_VERSIONS_FILE = $manifest
+        & pwsh -NoProfile -File (Join-Path $env:DEVENV_ROOT 'modules/65-ai-cli/run.ps1')
+        $LASTEXITCODE | Should -Be 0
+        Get-Content (Join-Path $TestDrive 'calls.log') -Raw | Should -Match 'install -g @openai/codex@0.1.2'
+        (git -C $env:DEVENV_ROOT status --porcelain modules/) | Should -BeNullOrEmpty
+        Remove-Item Env:DEVENV_TOOL_VERSIONS_FILE -ErrorAction SilentlyContinue
+    }
+
     It 'doctor reports missing Node when Codex is absent' -Skip:(-not $IsWindows) {
         Remove-Item (Join-Path $script:stubs 'node.cmd') -ErrorAction SilentlyContinue
         Remove-Item (Join-Path $script:stubs 'npm.cmd') -ErrorAction SilentlyContinue
