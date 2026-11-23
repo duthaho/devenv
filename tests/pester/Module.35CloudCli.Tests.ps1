@@ -58,6 +58,8 @@ exit /b 0
         Remove-Item (Join-Path $script:stubs 'node.cmd') -ErrorAction SilentlyContinue
         Remove-Item (Join-Path $script:stubs 'npm.cmd') -ErrorAction SilentlyContinue
         Remove-Item (Join-Path $script:stubs 'wrangler.cmd') -ErrorAction SilentlyContinue
+        Remove-Item (Join-Path $script:stubs 'winget.cmd') -ErrorAction SilentlyContinue
+        Remove-Item (Join-Path $script:stubs 'cloudflared.cmd') -ErrorAction SilentlyContinue
         $output = & (Join-Path $PSHOME 'pwsh.exe') -NoProfile -File (Join-Path $env:DEVENV_ROOT 'modules/35-cloud-cli/doctor.ps1') 2>&1
         $LASTEXITCODE | Should -Be 0
         $output | Should -Match 'wrangler not installed \(opt-in disabled'
