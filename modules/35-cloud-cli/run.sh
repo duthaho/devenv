@@ -85,8 +85,10 @@ aws_cli_version() {
   aws --version 2>&1 | head -n1
 }
 
-install_aws_cli_linux() {
-  local arch archive signature gpg_home tmp_dir url
+install_aws_cli_linux() (
+  local arch archive signature gpg_home tmp_dir tool url
+  tmp_dir=""
+  trap '[ -z "$tmp_dir" ] || rm -rf "$tmp_dir"' EXIT
   case "$(uname -m)" in
     x86_64) arch=x86_64 ;;
     aarch64|arm64) arch=aarch64 ;;
@@ -108,8 +110,18 @@ install_aws_cli_linux() {
   gpg --batch --homedir "$gpg_home" --verify "$signature" "$archive"
   unzip -q "$archive" -d "$tmp_dir"
   sudo "$tmp_dir/aws/install" --update
-  rm -rf "$tmp_dir"
-}
+)
+
+install_aws_cli_macos() (
+  local pkg pkg_dir
+  pkg_dir=""
+  trap '[ -z "$pkg_dir" ] || rm -rf "$pkg_dir"' EXIT
+  pkg_dir="$(mktemp -d)"
+  pkg="$pkg_dir/AWSCLIV2.pkg"
+  log_info 'Downloading official AWS CLI v2 macOS package'
+  curl -fsSL https://awscli.amazonaws.com/AWSCLIV2.pkg -o "$pkg"
+  sudo installer -pkg "$pkg" -target /
+)
 
 install_aws_cli() {
   [ "${DEVENV_CLOUD_AWS:-0}" = "1" ] || return 0
@@ -127,14 +139,7 @@ install_aws_cli() {
     return 0
   fi
   case "$(devenv_os)" in
-    mac)
-      local pkg
-      pkg="$(mktemp -t AWSCLIV2).pkg"
-      log_info 'Downloading official AWS CLI v2 macOS package'
-      curl -fsSL https://awscli.amazonaws.com/AWSCLIV2.pkg -o "$pkg"
-      sudo installer -pkg "$pkg" -target /
-      rm -f "$pkg"
-      ;;
+    mac) install_aws_cli_macos ;;
     linux|wsl) install_aws_cli_linux ;;
     *) log_err 'AWS CLI v2 installation is only supported on macOS and Linux from run.sh'; return 1 ;;
   esac

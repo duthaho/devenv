@@ -84,7 +84,7 @@ function Invoke-DevenvMenu {
             if ('cloudflared' -in $cloudTools) { $env:DEVENV_CLOUD_CLOUDFLARED = '1' }
             if ('aws' -in $cloudTools) { $env:DEVENV_CLOUD_AWS = '1' }
         } catch {
-            Write-DevenvWarn "menu: Cloudflare CLI selection cancelled; skipping cloud CLIs ($_)"
+            Write-DevenvWarn "menu: cloud CLI selection cancelled; skipping cloud CLIs ($_)"
         }
     }
     # Non-empty flag so "chose no languages" (empty DEVENV_LANGS) still filters
