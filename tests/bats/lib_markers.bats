@@ -42,7 +42,7 @@ load test_helper
   ai="$(DEVENV_TOOL_VERSIONS_FILE="$manifest" bash -c 'source "$DEVENV_ROOT/lib/markers.sh"; module_sha "$DEVENV_ROOT/modules/65-ai-cli"')"
   cloud="$(DEVENV_TOOL_VERSIONS_FILE="$manifest" bash -c 'source "$DEVENV_ROOT/lib/markers.sh"; module_sha "$DEVENV_ROOT/modules/35-cloud-cli"')"
   base="$(DEVENV_TOOL_VERSIONS_FILE="$manifest" bash -c 'source "$DEVENV_ROOT/lib/markers.sh"; module_sha "$DEVENV_ROOT/modules/00-base"')"
-  sed -i 's/codex.version=latest/codex.version=0.1.2/' "$manifest"
+  portable_sed_in_place 's/codex.version=latest/codex.version=0.1.2/' "$manifest"
   ai_changed="$(DEVENV_TOOL_VERSIONS_FILE="$manifest" bash -c 'source "$DEVENV_ROOT/lib/markers.sh"; module_sha "$DEVENV_ROOT/modules/65-ai-cli"')"
   cloud_changed="$(DEVENV_TOOL_VERSIONS_FILE="$manifest" bash -c 'source "$DEVENV_ROOT/lib/markers.sh"; module_sha "$DEVENV_ROOT/modules/35-cloud-cli"')"
   base_changed="$(DEVENV_TOOL_VERSIONS_FILE="$manifest" bash -c 'source "$DEVENV_ROOT/lib/markers.sh"; module_sha "$DEVENV_ROOT/modules/00-base"')"
