@@ -65,6 +65,17 @@ stub_tool() {
   [[ "$output" == *'DEVENV_SKIP_PLATFORM_CLI_INSTALL'* ]]
 }
 
+@test "45-platform-cli: selected install does not create kubeconfig state" {
+  export DEVENV_PLATFORM_KUBECTL=1
+  local test_home="$TEST_TMP/home"
+  mkdir -p "$test_home"
+  stub_tool brew 'printf "#!%s\\necho clientVersion: v1.34.0\\n" "$BASH_BIN" > "$STUBS/kubectl"; "$CHMOD_BIN" +x "$STUBS/kubectl"'
+
+  run env HOME="$test_home" OSTYPE=darwin PATH="$STUBS" "$BASH_BIN" "$ROOT/modules/45-platform-cli/run.sh"
+  [ "$status" -eq 0 ]
+  [ ! -e "$test_home/.kube" ]
+}
+
 @test "45-platform-cli: selected tools are idempotent" {
   export DEVENV_PLATFORM_KUBECTL=1 DEVENV_PLATFORM_HELM=1 DEVENV_PLATFORM_OPENTOFU=1
   stub_tool kubectl 'echo clientVersion: v1.34.0'
