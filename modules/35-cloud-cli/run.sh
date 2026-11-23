@@ -34,8 +34,8 @@ install_wrangler() {
 install_cloudflared_apt() {
   log_info 'Adding official Cloudflare apt repository for cloudflared'
   sudo install -m 0755 -d /usr/share/keyrings
-  curl -fsSL https://pkg.cloudflare.com/cloudflare-ascii-pgp.key | sudo gpg --dearmor --yes -o /usr/share/keyrings/cloudflare-main.gpg
-  echo 'deb [signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/cloudflared any main' | sudo tee /etc/apt/sources.list.d/cloudflared.list >/dev/null
+  curl -fsSL https://pkg.cloudflare.com/cloudflare-public-v2.gpg | sudo tee /usr/share/keyrings/cloudflare-public-v2.gpg >/dev/null
+  echo 'deb [signed-by=/usr/share/keyrings/cloudflare-public-v2.gpg] https://pkg.cloudflare.com/cloudflared any main' | sudo tee /etc/apt/sources.list.d/cloudflared.list >/dev/null
   sudo apt-get update -qq
   sudo apt-get install -y cloudflared
 }

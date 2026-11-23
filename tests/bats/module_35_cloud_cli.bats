@@ -51,6 +51,13 @@ stub_tool() {
   [[ "$output" == *'35-cloud-cli skipped'* ]]
 }
 
+@test "35-cloud-cli: uses Cloudflare's v2 apt key and scoped keyring" {
+  run grep -F 'https://pkg.cloudflare.com/cloudflare-public-v2.gpg' "$ROOT/modules/35-cloud-cli/run.sh"
+  [ "$status" -eq 0 ]
+  run grep -F 'signed-by=/usr/share/keyrings/cloudflare-public-v2.gpg' "$ROOT/modules/35-cloud-cli/run.sh"
+  [ "$status" -eq 0 ]
+}
+
 @test "35-cloud-cli doctor: reports missing Node for selected Wrangler" {
   export DEVENV_CLOUD_CLOUDFLARED=0
   stub_tool dirname '/usr/bin/dirname "$@"'
