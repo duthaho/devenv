@@ -19,13 +19,13 @@ install_wrangler() {
     return 0
   fi
   if ! command -v node >/dev/null 2>&1 || ! command -v npm >/dev/null 2>&1; then
-    log_warn 'Node/npm not on PATH; install Node via 30-toolchains, then re-run --only 35-cloud-cli.'
+    log_warn 'Node/npm not on PATH; install Node via 30-toolchains, then re-run --force --only 35-cloud-cli.'
     return 0
   fi
   log_info 'npm install -g wrangler'
   npm install -g wrangler >/dev/null
   if ! command -v wrangler >/dev/null 2>&1 || ! wrangler --version >/dev/null 2>&1; then
-    log_err "Wrangler installation completed but 'wrangler --version' is unavailable. Restart the shell to refresh mise shims, then re-run --only 35-cloud-cli."
+    log_err "Wrangler installation completed but 'wrangler --version' is unavailable. Restart the shell to refresh mise shims, then re-run --force --only 35-cloud-cli."
     return 1
   fi
   log_info "wrangler $(wrangler --version | head -n1) installed"
@@ -34,7 +34,7 @@ install_wrangler() {
 install_cloudflared_apt() {
   log_info 'Adding official Cloudflare apt repository for cloudflared'
   sudo install -m 0755 -d /usr/share/keyrings
-  curl -fsSL https://pkg.cloudflare.com/cloudflare-ascii-pgp.key | sudo gpg --dearmor -o /usr/share/keyrings/cloudflare-main.gpg
+  curl -fsSL https://pkg.cloudflare.com/cloudflare-ascii-pgp.key | sudo gpg --dearmor --yes -o /usr/share/keyrings/cloudflare-main.gpg
   echo 'deb [signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/cloudflared any main' | sudo tee /etc/apt/sources.list.d/cloudflared.list >/dev/null
   sudo apt-get update -qq
   sudo apt-get install -y cloudflared

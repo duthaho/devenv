@@ -18,7 +18,7 @@ function Install-Wrangler {
         return
     }
     if (-not (Get-Command node -ErrorAction SilentlyContinue) -or -not (Get-Command npm -ErrorAction SilentlyContinue)) {
-        Write-DevenvWarn 'Node/npm not on PATH; install Node via 30-toolchains, then re-run -Only 35-cloud-cli.'
+        Write-DevenvWarn 'Node/npm not on PATH; install Node via 30-toolchains, then re-run -Force -Only 35-cloud-cli.'
         return
     }
     Write-DevenvInfo 'npm install -g wrangler'

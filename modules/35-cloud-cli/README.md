@@ -7,8 +7,13 @@ independently. No selection means this module does not install anything.
 ## Install
 
 Enable either tool outside the menu with `DEVENV_CLOUD_WRANGLER=1` or
-`DEVENV_CLOUD_CLOUDFLARED=1`, then run `devenv up --only 35-cloud-cli`.
-PowerShell users can set the same variables to `'1'` in `$env:`.
+`DEVENV_CLOUD_CLOUDFLARED=1`, then run
+`devenv up --force --only 35-cloud-cli`. PowerShell users can set the same
+variables to `'1'` in `$env:` and run `devenv up -Force -Only 35-cloud-cli`.
+
+`--force` / `-Force` is required when enabling a Cloudflare CLI after an
+earlier run skipped this module: bootstrap's module marker caches the module
+files, not environment-variable selections.
 
 - [Wrangler](https://developers.cloudflare.com/workers/wrangler/install-and-update/)
   is installed with `npm install -g wrangler` and needs Node/npm from

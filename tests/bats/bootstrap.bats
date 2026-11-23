@@ -84,6 +84,26 @@ EOF
   [ "${lines[1]}" = "ran 10-bbb" ]
 }
 
+@test "bootstrap force re-runs a cached Cloudflare CLI selection" {
+  _setup_fakerepo
+  mkdir -p "$FAKEROOT/modules/35-cloud-cli"
+  cat > "$FAKEROOT/modules/35-cloud-cli/run.sh" <<'EOF'
+#!/usr/bin/env bash
+echo "wrangler=${DEVENV_CLOUD_WRANGLER:-0}" >> "$TEST_TMP/cloud.log"
+EOF
+  chmod +x "$FAKEROOT/modules/35-cloud-cli/run.sh"
+
+  env DEVENV_CACHE_DIR="$DEVENV_CACHE_DIR" TEST_TMP="$TEST_TMP" DEVENV_CLOUD_WRANGLER=0 \
+    "$FAKEROOT/bootstrap.sh" --only 35-cloud-cli >/dev/null
+  : > "$TEST_TMP/cloud.log"
+
+  run env DEVENV_CACHE_DIR="$DEVENV_CACHE_DIR" TEST_TMP="$TEST_TMP" DEVENV_CLOUD_WRANGLER=1 \
+    "$FAKEROOT/bootstrap.sh" --force --only 35-cloud-cli
+  [ "$status" -eq 0 ]
+  run cat "$TEST_TMP/cloud.log"
+  [ "$output" = 'wrangler=1' ]
+}
+
 @test "bootstrap --from skips earlier modules" {
   _setup_fakerepo
   : > "$TEST_TMP/order.log"
