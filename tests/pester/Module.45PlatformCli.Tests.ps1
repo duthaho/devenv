@@ -27,6 +27,9 @@ Describe 'modules/45-platform-cli/run.ps1 (mocked)' -Tag 'Windows' {
     }
 
     BeforeEach {
+        'kubectl.cmd','helm.cmd','tofu.cmd' |
+            ForEach-Object { Remove-Item (Join-Path $script:stubs $_) -Force -ErrorAction SilentlyContinue }
+        Remove-Item (Join-Path $TestDrive 'calls.log') -Force -ErrorAction SilentlyContinue
         @"
 @echo off
 echo winget %* >> "$TestDrive\calls.log"
