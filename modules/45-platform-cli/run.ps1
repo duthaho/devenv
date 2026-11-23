@@ -47,7 +47,9 @@ function Install-PlatformTool {
     Write-DevenvInfo "$DisplayName installed"
 }
 
-if ($env:DEVENV_PLATFORM_KUBECTL -ne '1' -and $env:DEVENV_PLATFORM_HELM -ne '1' -and $env:DEVENV_PLATFORM_OPENTOFU -ne '1') {
+if ((Get-DevenvEnvironmentValue DEVENV_PLATFORM_KUBECTL) -ne '1' -and
+    (Get-DevenvEnvironmentValue DEVENV_PLATFORM_HELM) -ne '1' -and
+    (Get-DevenvEnvironmentValue DEVENV_PLATFORM_OPENTOFU) -ne '1') {
     Write-DevenvInfo '45-platform-cli skipped (select platform CLIs in the menu or set DEVENV_PLATFORM_KUBECTL=1 / DEVENV_PLATFORM_HELM=1 / DEVENV_PLATFORM_OPENTOFU=1)'
     exit 0
 }
@@ -56,3 +58,4 @@ Install-PlatformTool -EnvironmentVariable DEVENV_PLATFORM_KUBECTL -SkipVariable 
 Install-PlatformTool -EnvironmentVariable DEVENV_PLATFORM_HELM -SkipVariable DEVENV_SKIP_HELM_INSTALL -Command helm -WingetId Helm.Helm -VersionArguments @('version','--short') -DisplayName Helm
 Install-PlatformTool -EnvironmentVariable DEVENV_PLATFORM_OPENTOFU -SkipVariable DEVENV_SKIP_OPENTOFU_INSTALL -Command tofu -WingetId OpenTofu.OpenTofu -VersionArguments @('version') -DisplayName OpenTofu
 Write-DevenvInfo '45-platform-cli: done'
+exit 0
