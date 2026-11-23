@@ -39,6 +39,7 @@ load test_helper
   local manifest="$TEST_TMP/versions.txt"
   cp "$DEVENV_ROOT/config/tool-versions.txt" "$manifest"
   local ai cloud base ai_changed cloud_changed base_changed ps_sha bash_sha
+  local ps_manifest ps_markers ps_module
   ai="$(DEVENV_TOOL_VERSIONS_FILE="$manifest" bash -c 'source "$DEVENV_ROOT/lib/markers.sh"; module_sha "$DEVENV_ROOT/modules/65-ai-cli"')"
   cloud="$(DEVENV_TOOL_VERSIONS_FILE="$manifest" bash -c 'source "$DEVENV_ROOT/lib/markers.sh"; module_sha "$DEVENV_ROOT/modules/35-cloud-cli"')"
   base="$(DEVENV_TOOL_VERSIONS_FILE="$manifest" bash -c 'source "$DEVENV_ROOT/lib/markers.sh"; module_sha "$DEVENV_ROOT/modules/00-base"')"
@@ -47,7 +48,10 @@ load test_helper
   cloud_changed="$(DEVENV_TOOL_VERSIONS_FILE="$manifest" bash -c 'source "$DEVENV_ROOT/lib/markers.sh"; module_sha "$DEVENV_ROOT/modules/35-cloud-cli"')"
   base_changed="$(DEVENV_TOOL_VERSIONS_FILE="$manifest" bash -c 'source "$DEVENV_ROOT/lib/markers.sh"; module_sha "$DEVENV_ROOT/modules/00-base"')"
   [ "$ai" != "$ai_changed" ]; [ "$cloud" = "$cloud_changed" ]; [ "$base" = "$base_changed" ]
-  ps_sha="$(DEVENV_TOOL_VERSIONS_FILE="$manifest" pwsh -NoProfile -Command ". '$DEVENV_ROOT/lib/markers.ps1'; Get-DevenvModuleSha '$DEVENV_ROOT/modules/65-ai-cli'")"
+  ps_manifest="$(pwsh_path "$manifest")"
+  ps_markers="$(pwsh_path "$DEVENV_ROOT/lib/markers.ps1")"
+  ps_module="$(pwsh_path "$DEVENV_ROOT/modules/65-ai-cli")"
+  ps_sha="$(DEVENV_TOOL_VERSIONS_FILE="$ps_manifest" pwsh -NoProfile -Command ". '$ps_markers'; Get-DevenvModuleSha '$ps_module'")"
   bash_sha="$ai_changed"
   [ "$bash_sha" = "$ps_sha" ]
 }

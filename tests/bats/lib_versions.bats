@@ -3,6 +3,11 @@ load test_helper
 
 setup() { TEST_TMP="$(mktemp -d)"; export TEST_TMP; export DEVENV_CACHE_DIR="$TEST_TMP/cache"; mkdir -p "$DEVENV_CACHE_DIR"; guard_network; }
 
+@test "pwsh_path converts MSYS paths with cygpath" {
+  stub_cmd cygpath "test \"\$1\" = \"-m\" && test \"\$2\" = \"/d/a/devenv/devenv/lib/versions.ps1\" || exit 1; printf '%s\\n' 'D:/a/devenv/devenv/lib/versions.ps1'"
+  [ "$(pwsh_path "/d/a/devenv/devenv/lib/versions.ps1")" = "D:/a/devenv/devenv/lib/versions.ps1" ]
+}
+
 @test "tool version manifest validates and returns npm specs" {
   run bash -c 'source "$DEVENV_ROOT/lib/versions.sh"; devenv_tool_validate; devenv_npm_spec codex; devenv_npm_spec wrangler'
   [ "$status" -eq 0 ]
@@ -72,12 +77,13 @@ CASES
 
 @test "Bash tool settings match PowerShell for every manifest key" {
   command -v pwsh >/dev/null || skip "pwsh not installed"
-  local key tool field bash_value ps_value
+  local key tool field bash_value ps_value ps_versions
+  ps_versions="$(pwsh_path "$DEVENV_ROOT/lib/versions.ps1")"
   while IFS='=' read -r key _; do
     [[ -z "$key" || "$key" == \#* ]] && continue
     tool="${key%%.*}"; field="${key#*.}"
     bash_value="$(bash -c 'source "$DEVENV_ROOT/lib/versions.sh"; devenv_tool_get "$1" "$2"' _ "$tool" "$field")"
-    ps_value="$(pwsh -NoProfile -Command ". '$DEVENV_ROOT/lib/versions.ps1'; Get-DevenvToolSetting '$tool' '$field'")"
+    ps_value="$(pwsh -NoProfile -Command ". '$ps_versions'; Get-DevenvToolSetting '$tool' '$field'")"
     [ "$bash_value" = "$ps_value" ]
   done < "$DEVENV_ROOT/config/tool-versions.txt"
 }
