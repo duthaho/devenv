@@ -20,13 +20,14 @@ exit /b 0
         $env:PATH = "$script:stubs;$env:PATH"
         $env:DEVENV_CLOUD_WRANGLER = '1'
         $env:DEVENV_CLOUD_CLOUDFLARED = '0'
+        $env:DEVENV_CLOUD_AWS = '0'
         Remove-Item Env:DEVENV_SKIP_NPM_INSTALL -ErrorAction SilentlyContinue
         Remove-Item Env:DEVENV_SKIP_WRANGLER_INSTALL -ErrorAction SilentlyContinue
     }
 
     AfterAll {
         if ($script:origPath) { $env:PATH = $script:origPath }
-        'DEVENV_CLOUD_WRANGLER','DEVENV_CLOUD_CLOUDFLARED','DEVENV_SKIP_NPM_INSTALL','DEVENV_SKIP_WRANGLER_INSTALL' |
+        'DEVENV_CLOUD_WRANGLER','DEVENV_CLOUD_CLOUDFLARED','DEVENV_CLOUD_AWS','DEVENV_SKIP_NPM_INSTALL','DEVENV_SKIP_WRANGLER_INSTALL','DEVENV_SKIP_AWS_CLI_INSTALL' |
             ForEach-Object { Remove-Item "Env:$_" -ErrorAction SilentlyContinue }
     }
 
@@ -55,6 +56,7 @@ exit /b 0
     It 'doctor reports each disabled tool independently' -Skip:(-not $IsWindows) {
         $env:DEVENV_CLOUD_WRANGLER = '0'
         $env:DEVENV_CLOUD_CLOUDFLARED = '0'
+        $env:DEVENV_CLOUD_AWS = '0'
         Remove-Item (Join-Path $script:stubs 'node.cmd') -ErrorAction SilentlyContinue
         Remove-Item (Join-Path $script:stubs 'npm.cmd') -ErrorAction SilentlyContinue
         Remove-Item (Join-Path $script:stubs 'wrangler.cmd') -ErrorAction SilentlyContinue
@@ -64,5 +66,16 @@ exit /b 0
         $LASTEXITCODE | Should -Be 0
         $output | Should -Match 'wrangler not installed \(opt-in disabled'
         $output | Should -Match 'cloudflared not installed \(opt-in disabled'
+        $output | Should -Match 'AWS CLI not installed \(opt-in disabled'
+    }
+
+    It 'skips selected AWS CLI installation when requested' -Skip:(-not $IsWindows) {
+        $env:DEVENV_CLOUD_WRANGLER = '0'
+        $env:DEVENV_CLOUD_CLOUDFLARED = '0'
+        $env:DEVENV_CLOUD_AWS = '1'
+        $env:DEVENV_SKIP_AWS_CLI_INSTALL = '1'
+        $output = (& pwsh -NoProfile -File (Join-Path $env:DEVENV_ROOT 'modules/35-cloud-cli/run.ps1') 2>&1 | Out-String)
+        $LASTEXITCODE | Should -Be 0
+        $output | Should -Match 'AWS CLI install skipped'
     }
 }

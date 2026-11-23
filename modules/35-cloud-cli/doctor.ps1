@@ -22,5 +22,16 @@ function Test-Cloudflared {
     else { 'WARN cloudflared not installed (opt-in enabled)' | Write-Output }
 }
 
+function Test-AwsCli {
+    if (Get-Command aws -ErrorAction SilentlyContinue) {
+        $version = (& aws --version 2>&1 | Select-Object -First 1)
+        if ($LASTEXITCODE -eq 0 -and $version -like 'aws-cli/2.*') { "PASS AWS CLI v2 $version" | Write-Output; return }
+        if ($LASTEXITCODE -eq 0 -and $version) { "WARN AWS CLI v1 installed ($version); v2 is required" | Write-Output; return }
+    }
+    if ($env:DEVENV_CLOUD_AWS -ne '1') { 'PASS AWS CLI not installed (opt-in disabled; set DEVENV_CLOUD_AWS=1)' | Write-Output }
+    else { 'WARN AWS CLI v2 not installed (opt-in enabled)' | Write-Output }
+}
+
 Test-Wrangler
 Test-Cloudflared
+Test-AwsCli

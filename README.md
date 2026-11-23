@@ -57,7 +57,7 @@ detection, WSL↔Windows interop, `mise`/`direnv` shell hooks, tool shims on
 | `10-1password`  | 1Password app + CLI + SSH agent                                               | all                                    |
 | `20-dotfiles`   | Clone + run [duthaho/dotfiles](https://github.com/duthaho/dotfiles) bootstrap | all                                    |
 | `30-toolchains` | `mise` + `direnv` everywhere, `devbox` on Unix-family                         | all (devbox skipped on native Windows) |
-| `35-cloud-cli`  | Opt-in Cloudflare Wrangler and cloudflared (each independently selected)       | all (Wrangler requires npm)            |
+| `35-cloud-cli`  | Opt-in Wrangler, cloudflared, and AWS CLI v2 (each independently selected)     | all (Wrangler requires npm)            |
 | `40-docker`     | Docker engine + `devenv` network + baseline compose stack                     | all                                    |
 | `50-ide`        | VS Code + Cursor + extension list + settings overlay                          | all (Linux: install warn-and-skip)     |
 | `60-claude`     | Claude Code CLI + MCP servers + plugin packs                                  | all (requires npm from 30-toolchains)  |

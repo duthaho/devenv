@@ -15,6 +15,7 @@ setup() {
   export HOME="$TEST_TMP/home"; mkdir -p "$HOME"
   export DEVENV_CLOUD_WRANGLER=1
   export DEVENV_CLOUD_CLOUDFLARED=1
+  export DEVENV_CLOUD_AWS=0
 }
 
 stub_tool() {
@@ -46,13 +47,40 @@ stub_tool() {
 }
 
 @test "35-cloud-cli: does not install until a tool is selected" {
-  unset DEVENV_CLOUD_WRANGLER DEVENV_CLOUD_CLOUDFLARED
+  unset DEVENV_CLOUD_WRANGLER DEVENV_CLOUD_CLOUDFLARED DEVENV_CLOUD_AWS
   stub_tool npm 'exit 1'
   stub_tool brew 'exit 1'
 
   run bash "$ROOT/modules/35-cloud-cli/run.sh"
   [ "$status" -eq 0 ]
   [[ "$output" == *'35-cloud-cli skipped'* ]]
+}
+
+@test "35-cloud-cli: AWS CLI v2 is idempotent" {
+  export DEVENV_CLOUD_WRANGLER=0 DEVENV_CLOUD_CLOUDFLARED=0 DEVENV_CLOUD_AWS=1
+  stub_tool aws 'echo aws-cli/2.25.0 Python/3.12 Linux/6 exe/x86_64; exit 0'
+
+  run env PATH="$STUBS:$PATH" "$BASH_BIN" "$ROOT/modules/35-cloud-cli/run.sh"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *'already installed'* ]]
+}
+
+@test "35-cloud-cli: AWS CLI v1 is warned about without replacement" {
+  export DEVENV_CLOUD_WRANGLER=0 DEVENV_CLOUD_CLOUDFLARED=0 DEVENV_CLOUD_AWS=1
+  stub_tool aws 'echo aws-cli/1.32.0 Python/3.11 Linux/6 botocore/1.34.0; exit 0'
+
+  run env PATH="$STUBS:$PATH" "$BASH_BIN" "$ROOT/modules/35-cloud-cli/run.sh"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *'v1 detected'* ]]
+}
+
+@test "35-cloud-cli: AWS Linux installer verifies the signed official bundle" {
+  run grep -F 'awscli-exe-linux-${arch}.zip' "$ROOT/modules/35-cloud-cli/run.sh"
+  [ "$status" -eq 0 ]
+  run grep -F 'gpg --batch --homedir "$gpg_home" --verify "$signature" "$archive"' "$ROOT/modules/35-cloud-cli/run.sh"
+  [ "$status" -eq 0 ]
+  run grep -F 'A631 0ACC 4672 475C' "$ROOT/modules/35-cloud-cli/README.md"
+  [ "$status" -eq 0 ]
 }
 
 @test "35-cloud-cli: uses Cloudflare's v2 apt key and scoped keyring" {
@@ -68,4 +96,15 @@ stub_tool() {
   run env PATH="$STUBS" "$BASH_BIN" "$ROOT/modules/35-cloud-cli/doctor.sh"
   [ "$status" -eq 0 ]
   [[ "$output" == *'Node MISSING'* ]]
+}
+
+@test "35-cloud-cli doctor: distinguishes AWS CLI v1" {
+  export DEVENV_CLOUD_WRANGLER=0 DEVENV_CLOUD_CLOUDFLARED=0 DEVENV_CLOUD_AWS=1
+  stub_tool aws 'echo aws-cli/1.32.0 Python/3.11 Linux/6 botocore/1.34.0; exit 0'
+  stub_tool dirname '"$DIRNAME_BIN" "$@"'
+  stub_tool head '"$HEAD_BIN" "$@"'
+
+  run env PATH="$STUBS" "$BASH_BIN" "$ROOT/modules/35-cloud-cli/doctor.sh"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *'AWS CLI v1 installed'* ]]
 }
