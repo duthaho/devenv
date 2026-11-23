@@ -85,6 +85,7 @@ stub_tool() {
 }
 
 @test "35-cloud-cli: installs AWS CLI v2 after Linux signature verification" {
+  case "${OSTYPE:-}" in msys*|cygwin*|win32*) skip "Linux installer mock: MSYS cannot chmod the gnupg homedir" ;; esac
   export DEVENV_CLOUD_WRANGLER=0 DEVENV_CLOUD_CLOUDFLARED=0 DEVENV_CLOUD_AWS=1
   stub_tool uname 'echo x86_64'
   stub_tool aws 'exit 127'
@@ -102,6 +103,7 @@ stub_tool() {
 }
 
 @test "35-cloud-cli: stops before AWS installation when Linux signature verification fails" {
+  case "${OSTYPE:-}" in msys*|cygwin*|win32*) skip "Linux installer mock: MSYS cannot chmod the gnupg homedir" ;; esac
   export DEVENV_CLOUD_WRANGLER=0 DEVENV_CLOUD_CLOUDFLARED=0 DEVENV_CLOUD_AWS=1
   stub_tool uname 'echo x86_64'
   stub_tool aws 'exit 127'
