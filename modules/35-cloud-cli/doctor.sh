@@ -25,5 +25,19 @@ doctor_cloudflared() {
   fi
 }
 
+doctor_aws() {
+  local version
+  if command -v aws >/dev/null 2>&1 && version="$(aws --version 2>&1 | head -n1)" && [[ "$version" == aws-cli/2.* ]]; then
+    printf 'PASS AWS CLI v2 %s\n' "$version"
+  elif command -v aws >/dev/null 2>&1 && version="$(aws --version 2>&1 | head -n1)"; then
+    printf 'WARN AWS CLI v1 installed (%s); v2 is required\n' "$version"
+  elif [ "${DEVENV_CLOUD_AWS:-0}" != "1" ]; then
+    printf 'PASS AWS CLI not installed (opt-in disabled; set DEVENV_CLOUD_AWS=1)\n'
+  else
+    printf 'WARN AWS CLI v2 not installed (opt-in enabled)\n'
+  fi
+}
+
 doctor_wrangler
 doctor_cloudflared
+doctor_aws

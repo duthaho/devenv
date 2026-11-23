@@ -78,12 +78,13 @@ function Invoke-DevenvMenu {
     if ('65-ai-cli' -in $chosenMods) { $env:DEVENV_AI_CLI_ENABLED = '1' }
     if ('35-cloud-cli' -in $chosenMods) {
         try {
-            $cloudTools = @(Invoke-DevenvGumChoose -Header 'Select Cloudflare CLI tools' `
-                -Items @('wrangler','cloudflared') | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+            $cloudTools = @(Invoke-DevenvGumChoose -Header 'Select cloud CLI tools' `
+                -Items @('wrangler','cloudflared','aws') | ForEach-Object { $_.Trim() } | Where-Object { $_ })
             if ('wrangler' -in $cloudTools) { $env:DEVENV_CLOUD_WRANGLER = '1' }
             if ('cloudflared' -in $cloudTools) { $env:DEVENV_CLOUD_CLOUDFLARED = '1' }
+            if ('aws' -in $cloudTools) { $env:DEVENV_CLOUD_AWS = '1' }
         } catch {
-            Write-DevenvWarn "menu: Cloudflare CLI selection cancelled; skipping cloud CLIs ($_)"
+            Write-DevenvWarn "menu: cloud CLI selection cancelled; skipping cloud CLIs ($_)"
         }
     }
     # Non-empty flag so "chose no languages" (empty DEVENV_LANGS) still filters

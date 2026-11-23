@@ -93,12 +93,14 @@ devenv_menu_run() {
   # shellcheck disable=SC2086
   if _devenv_in_words "35-cloud-cli" $chosen_mods; then
     local cloud_tools
-    cloud_tools="$(gum choose --no-limit --header 'Select Cloudflare CLI tools' wrangler cloudflared)" \
-      || { log_warn 'menu: Cloudflare CLI selection cancelled; skipping cloud CLIs'; cloud_tools=""; }
+    cloud_tools="$(gum choose --no-limit --header 'Select cloud CLI tools' wrangler cloudflared aws)" \
+      || { log_warn 'menu: cloud CLI selection cancelled; skipping cloud CLIs'; cloud_tools=""; }
     # shellcheck disable=SC2086
     if _devenv_in_words "wrangler" $cloud_tools; then export DEVENV_CLOUD_WRANGLER=1; fi
     # shellcheck disable=SC2086
     if _devenv_in_words "cloudflared" $cloud_tools; then export DEVENV_CLOUD_CLOUDFLARED=1; fi
+    # shellcheck disable=SC2086
+    if _devenv_in_words "aws" $cloud_tools; then export DEVENV_CLOUD_AWS=1; fi
   fi
 
   # DEVENV_LANGS_SET marks that the menu made a language choice, so a choice of

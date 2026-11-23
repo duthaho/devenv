@@ -53,11 +53,50 @@ function Install-Cloudflared {
     Write-DevenvInfo "cloudflared $((& cloudflared --version | Select-Object -First 1)) installed"
 }
 
-if ($env:DEVENV_CLOUD_WRANGLER -ne '1' -and $env:DEVENV_CLOUD_CLOUDFLARED -ne '1') {
-    Write-DevenvInfo '35-cloud-cli skipped (select Cloudflare CLIs in the menu or set DEVENV_CLOUD_WRANGLER=1 / DEVENV_CLOUD_CLOUDFLARED=1)'
+function Get-AwsCliVersion {
+    if (-not (Get-Command aws -ErrorAction SilentlyContinue)) { return $null }
+    $version = (& aws --version 2>&1 | Select-Object -First 1)
+    if ($LASTEXITCODE -eq 0 -and $version) { return $version.ToString() }
+    return $null
+}
+
+function Install-AwsCli {
+    if ($env:DEVENV_CLOUD_AWS -ne '1') { return }
+    if ($env:DEVENV_SKIP_AWS_CLI_INSTALL -eq '1') {
+        Write-DevenvInfo 'AWS CLI install skipped (DEVENV_SKIP_AWS_CLI_INSTALL)'
+        return
+    }
+    $version = Get-AwsCliVersion
+    if ($version) {
+        if ($version -like 'aws-cli/2.*') {
+            Write-DevenvInfo "AWS CLI $version already installed"
+            return
+        }
+        Write-DevenvWarn "AWS CLI v1 detected ($version); not replacing it automatically. Remove v1, then re-run -Force -Only 35-cloud-cli."
+        return
+    }
+    if ((Get-DevenvOs) -ne 'windows') { throw 'run.ps1 installs AWS CLI v2 only on Windows' }
+    $msi = Join-Path $env:TEMP 'AWSCLIV2.msi'
+    try {
+        Write-DevenvInfo 'Downloading official AWS CLI v2 Windows MSI'
+        Invoke-WebRequest -Uri 'https://awscli.amazonaws.com/AWSCLIV2.msi' -OutFile $msi
+        $process = Start-Process msiexec.exe -ArgumentList @('/i', $msi, '/qn') -Wait -PassThru
+        if ($process.ExitCode -ne 0) { throw "AWS CLI v2 MSI installation failed (exit $($process.ExitCode))" }
+    } finally {
+        Remove-Item -LiteralPath $msi -Force -ErrorAction SilentlyContinue
+    }
+    Update-DevenvPath
+    $version = Get-AwsCliVersion
+    if (-not $version -or $version -notlike 'aws-cli/2.*') { throw "AWS CLI installation completed but 'aws --version' did not report v2." }
+    Write-DevenvInfo "AWS CLI $version installed"
+}
+
+if ($env:DEVENV_CLOUD_WRANGLER -ne '1' -and $env:DEVENV_CLOUD_CLOUDFLARED -ne '1' -and $env:DEVENV_CLOUD_AWS -ne '1') {
+    Write-DevenvInfo '35-cloud-cli skipped (select cloud CLIs in the menu or set DEVENV_CLOUD_WRANGLER=1 / DEVENV_CLOUD_CLOUDFLARED=1 / DEVENV_CLOUD_AWS=1)'
     exit 0
 }
 
 Install-Wrangler
 Install-Cloudflared
+Install-AwsCli
 Write-DevenvInfo '35-cloud-cli: done'

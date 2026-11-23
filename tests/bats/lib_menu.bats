@@ -107,7 +107,7 @@ EOF
   [[ ",$DEVENV_MENU_SKIP," != *",65-ai-cli,"* ]]
 }
 
-@test "menu_run enables only selected Cloudflare CLI tools" {
+@test "menu_run enables only selected cloud CLI tools" {
   _gum_stub "'35-cloud-cli' '50-ide'" "'node'"
   # Replace the stub so its third invocation responds to the Cloudflare prompt.
   cat > "$STUBS/gum" <<'EOF'
@@ -115,14 +115,15 @@ EOF
 case "$*" in
   *'Select optional modules'*) printf '%s\n' 35-cloud-cli 50-ide ;;
   *'Select languages'*) printf '%s\n' node ;;
-  *'Select Cloudflare CLI tools'*) printf '%s\n' wrangler ;;
+  *'Select cloud CLI tools'*) printf '%s\n' wrangler ;;
 esac
 EOF
   chmod +x "$STUBS/gum"
-  unset DEVENV_CLOUD_WRANGLER DEVENV_CLOUD_CLOUDFLARED
+  unset DEVENV_CLOUD_WRANGLER DEVENV_CLOUD_CLOUDFLARED DEVENV_CLOUD_AWS
   devenv_menu_run "$MISE_CFG"
   [ "$DEVENV_CLOUD_WRANGLER" = "1" ]
   [ -z "${DEVENV_CLOUD_CLOUDFLARED:-}" ]
+  [ -z "${DEVENV_CLOUD_AWS:-}" ]
 }
 
 @test "menu_run marks langs set even when none chosen" {
