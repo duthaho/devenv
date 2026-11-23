@@ -55,6 +55,27 @@ stub_tool() {
   [ ! -e "$TEST_TMP/calls.log" ]
 }
 
+@test "65-ai-cli: warns on a pinned installed version drift without invoking npm" {
+  cp "$ROOT/config/tool-versions.txt" "$TEST_TMP/versions.txt"
+  sed -i 's/codex.version=latest/codex.version=0.1.2/' "$TEST_TMP/versions.txt"
+  stub_tool codex 'echo codex 0.0.9'
+  stub_tool npm 'echo unexpected >> "$TEST_TMP/calls.log"; exit 1'
+
+  run env DEVENV_TOOL_VERSIONS_FILE="$TEST_TMP/versions.txt" PATH="$STUBS:/usr/bin:/bin" "$BASH_BIN" "$ROOT/modules/65-ai-cli/run.sh"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *'pinned 0.1.2, installed 0.0.9'* ]]
+  [ ! -e "$TEST_TMP/calls.log" ]
+}
+
+@test "65-ai-cli doctor: reports pinned Codex version drift" {
+  cp "$ROOT/config/tool-versions.txt" "$TEST_TMP/versions.txt"
+  sed -i 's/codex.version=latest/codex.version=0.1.2/' "$TEST_TMP/versions.txt"
+  stub_tool codex 'echo codex 0.0.9'
+  run env DEVENV_TOOL_VERSIONS_FILE="$TEST_TMP/versions.txt" PATH="$STUBS:/usr/bin:/bin" "$BASH_BIN" "$ROOT/modules/65-ai-cli/doctor.sh"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *'WARN codex codex 0.0.9 (pinned 0.1.2, installed 0.0.9)'* ]]
+}
+
 @test "65-ai-cli: does not install until explicitly selected" {
   unset DEVENV_AI_CLI_ENABLED
   stub_tool npm 'echo unexpected >> "$TEST_TMP/calls.log"; exit 1'

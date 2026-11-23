@@ -34,6 +34,24 @@ load test_helper
   [ "$a" != "$b" ]
 }
 
+@test "manifest changes invalidate only its owning module and match PowerShell SHA" {
+  command -v pwsh >/dev/null || skip "pwsh not installed"
+  local manifest="$TEST_TMP/versions.txt"
+  cp "$DEVENV_ROOT/config/tool-versions.txt" "$manifest"
+  local ai cloud base ai_changed cloud_changed base_changed ps_sha bash_sha
+  ai="$(DEVENV_TOOL_VERSIONS_FILE="$manifest" bash -c 'source "$DEVENV_ROOT/lib/markers.sh"; module_sha "$DEVENV_ROOT/modules/65-ai-cli"')"
+  cloud="$(DEVENV_TOOL_VERSIONS_FILE="$manifest" bash -c 'source "$DEVENV_ROOT/lib/markers.sh"; module_sha "$DEVENV_ROOT/modules/35-cloud-cli"')"
+  base="$(DEVENV_TOOL_VERSIONS_FILE="$manifest" bash -c 'source "$DEVENV_ROOT/lib/markers.sh"; module_sha "$DEVENV_ROOT/modules/00-base"')"
+  sed -i 's/codex.version=latest/codex.version=0.1.2/' "$manifest"
+  ai_changed="$(DEVENV_TOOL_VERSIONS_FILE="$manifest" bash -c 'source "$DEVENV_ROOT/lib/markers.sh"; module_sha "$DEVENV_ROOT/modules/65-ai-cli"')"
+  cloud_changed="$(DEVENV_TOOL_VERSIONS_FILE="$manifest" bash -c 'source "$DEVENV_ROOT/lib/markers.sh"; module_sha "$DEVENV_ROOT/modules/35-cloud-cli"')"
+  base_changed="$(DEVENV_TOOL_VERSIONS_FILE="$manifest" bash -c 'source "$DEVENV_ROOT/lib/markers.sh"; module_sha "$DEVENV_ROOT/modules/00-base"')"
+  [ "$ai" != "$ai_changed" ]; [ "$cloud" = "$cloud_changed" ]; [ "$base" = "$base_changed" ]
+  ps_sha="$(DEVENV_TOOL_VERSIONS_FILE="$manifest" pwsh -NoProfile -Command ". '$DEVENV_ROOT/lib/markers.ps1'; Get-DevenvModuleSha '$DEVENV_ROOT/modules/65-ai-cli'")"
+  bash_sha="$ai_changed"
+  [ "$bash_sha" = "$ps_sha" ]
+}
+
 @test "is_done returns nonzero when marker missing" {
   run bash -c "source $DEVENV_ROOT/lib/markers.sh && is_done 00-base abc"
   [ "$status" -ne 0 ]

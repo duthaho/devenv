@@ -82,4 +82,21 @@ exit /b 0
         $LASTEXITCODE | Should -Be 0
         $output | Should -Match 'AWS CLI install skipped'
     }
+
+    It 'uses pinned AWS URL and stops before msiexec on a bad checksum' -Skip:(-not $IsWindows) {
+        Remove-Item (Join-Path $script:stubs 'aws.cmd') -ErrorAction SilentlyContinue
+        $manifest = Join-Path $TestDrive 'versions.txt'
+        $body = (Get-Content (Join-Path $env:DEVENV_ROOT 'config/tool-versions.txt') -Raw).Replace('awscli.version=latest','awscli.version=2.9.9').TrimEnd()
+        $sha = [string]::new('0', 64)
+        $body += "`nawscli.sha256.linux-x86_64=$sha`nawscli.sha256.linux-aarch64=$sha`nawscli.sha256.macos=$sha`nawscli.sha256.windows=$sha`n"
+        [IO.File]::WriteAllText($manifest, $body)
+        $env:DEVENV_TOOL_VERSIONS_FILE = $manifest
+        $env:DEVENV_CLOUD_WRANGLER = '0'; $env:DEVENV_CLOUD_CLOUDFLARED = '0'; $env:DEVENV_CLOUD_AWS = '1'
+        Mock Invoke-WebRequest { param($Uri, $OutFile) $Uri | Should -Match 'AWSCLIV2-2.9.9.msi'; [IO.File]::WriteAllText($OutFile, 'bad') }
+        Mock Start-Process { throw 'msiexec must not run after checksum failure' }
+        { & (Join-Path $env:DEVENV_ROOT 'modules/35-cloud-cli/run.ps1') } | Should -Throw 'E_BAD_SHA awscli.windows'
+        Should -Invoke Start-Process -Times 0 -Exactly
+        Test-Path (Join-Path $env:TEMP 'AWSCLIV2.msi') | Should -BeFalse
+        Remove-Item Env:DEVENV_TOOL_VERSIONS_FILE -ErrorAction SilentlyContinue
+    }
 }

@@ -15,6 +15,7 @@ Describe 'lib/markers.ps1' {
         Remove-DevenvTestSandbox -Path $env:DEVENV_TEST_SANDBOX
         $env:DEVENV_CACHE_DIR = $null
         $env:DEVENV_TEST_SANDBOX = $null
+        Remove-Item Env:DEVENV_TOOL_VERSIONS_FILE -ErrorAction SilentlyContinue
     }
 
     It 'Get-DevenvMarkerPath uses DEVENV_CACHE_DIR' {
@@ -41,6 +42,26 @@ Describe 'lib/markers.ps1' {
         Set-Content -Path (Join-Path $mod 'run.sh') -Value 'v2'
         $b = Get-DevenvModuleSha -ModuleDir $mod
         $a | Should -Not -Be $b
+    }
+
+    It 'changes only the owning module SHA when a manifest pin changes and matches Bash' {
+        if (-not (Get-Command bash -ErrorAction SilentlyContinue)) { Set-ItResult -Skipped -Because 'bash not installed'; return }
+        $manifest = Join-Path $env:DEVENV_TEST_SANDBOX 'versions.txt'
+        $original = Get-Content (Join-Path $env:DEVENV_ROOT 'config/tool-versions.txt') -Raw
+        [IO.File]::WriteAllText($manifest, $original)
+        $env:DEVENV_TOOL_VERSIONS_FILE = $manifest
+        $ai = Get-DevenvModuleSha (Join-Path $env:DEVENV_ROOT 'modules/65-ai-cli')
+        $cloud = Get-DevenvModuleSha (Join-Path $env:DEVENV_ROOT 'modules/35-cloud-cli')
+        $base = Get-DevenvModuleSha (Join-Path $env:DEVENV_ROOT 'modules/00-base')
+        [IO.File]::WriteAllText($manifest, $original.Replace('codex.version=latest','codex.version=0.1.2'))
+        $changedAi = Get-DevenvModuleSha (Join-Path $env:DEVENV_ROOT 'modules/65-ai-cli')
+        $changedCloud = Get-DevenvModuleSha (Join-Path $env:DEVENV_ROOT 'modules/35-cloud-cli')
+        $changedBase = Get-DevenvModuleSha (Join-Path $env:DEVENV_ROOT 'modules/00-base')
+        $changedAi | Should -Not -Be $ai
+        $changedCloud | Should -Be $cloud
+        $changedBase | Should -Be $base
+        $bashSha = (& bash -c 'source "$DEVENV_ROOT/lib/markers.sh"; module_sha "$1"' -- (Join-Path $env:DEVENV_ROOT 'modules/65-ai-cli')).Trim()
+        $changedAi | Should -Be $bashSha
     }
 
     It 'Test-DevenvDone returns false when marker missing' {
