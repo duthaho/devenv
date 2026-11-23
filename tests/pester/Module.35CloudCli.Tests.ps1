@@ -93,7 +93,10 @@ exit /b 0
     }
 
     It 'uses pinned AWS URL and stops before msiexec on a bad checksum' -Skip:(-not $IsWindows) {
-        Remove-Item (Join-Path $script:stubs 'aws.cmd') -ErrorAction SilentlyContinue
+        @'
+@echo off
+exit /b 127
+'@ | Set-Content -Path (Join-Path $script:stubs 'aws.cmd') -Encoding ASCII
         $manifest = Join-Path $TestDrive 'versions.txt'
         $body = (Get-Content (Join-Path $env:DEVENV_ROOT 'config/tool-versions.txt') -Raw).Replace('awscli.version=latest','awscli.version=2.9.9').TrimEnd()
         $sha = [string]::new('0', 64)
