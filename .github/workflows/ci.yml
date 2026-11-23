@@ -66,8 +66,6 @@ jobs:
 
       - name: bats unit tests
         env:
-          HTTP_PROXY: http://127.0.0.1:9
-          HTTPS_PROXY: http://127.0.0.1:9
           http_proxy: http://127.0.0.1:9
           https_proxy: http://127.0.0.1:9
           NO_PROXY: localhost,127.0.0.1
@@ -76,8 +74,6 @@ jobs:
       - name: Pester unit tests
         shell: pwsh
         env:
-          HTTP_PROXY: http://127.0.0.1:9
-          HTTPS_PROXY: http://127.0.0.1:9
           http_proxy: http://127.0.0.1:9
           https_proxy: http://127.0.0.1:9
           NO_PROXY: localhost,127.0.0.1
@@ -153,8 +149,6 @@ jobs:
       - name: bats unit tests
         shell: bash
         env:
-          HTTP_PROXY: http://127.0.0.1:9
-          HTTPS_PROXY: http://127.0.0.1:9
           http_proxy: http://127.0.0.1:9
           https_proxy: http://127.0.0.1:9
           NO_PROXY: localhost,127.0.0.1
@@ -165,8 +159,6 @@ jobs:
       - name: Pester unit tests
         shell: pwsh
         env:
-          HTTP_PROXY: http://127.0.0.1:9
-          HTTPS_PROXY: http://127.0.0.1:9
           http_proxy: http://127.0.0.1:9
           https_proxy: http://127.0.0.1:9
           NO_PROXY: localhost,127.0.0.1
