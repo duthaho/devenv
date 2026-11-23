@@ -12,7 +12,7 @@ Describe 'modules/45-platform-cli PowerShell defaults' {
         $doctorOutput = @(& pwsh -NoProfile -File (Join-Path $env:DEVENV_ROOT 'modules/45-platform-cli/doctor.ps1') 2>&1)
         $doctorExitCode = $LASTEXITCODE
         if ($doctorExitCode -ne 0) { throw "doctor.ps1 exited $doctorExitCode`: $($doctorOutput -join [Environment]::NewLine)" }
-        $doctorOutput | Should -Match 'opt-in disabled'
+        ($doctorOutput -join [Environment]::NewLine) | Should -Match 'opt-in disabled'
     }
 }
 
