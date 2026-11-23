@@ -34,8 +34,8 @@ devenv help                     usage
 ```
 
 On a **fresh** machine (no `.done` markers) an interactive `devenv up` opens a
-curated `gum` checklist to pick which **optional modules** (`50-ide`,
-`60-claude`, `65-ai-cli`, `70-repos`, `80-gui`) and which **language toolchains** (the
+curated `gum` checklist to pick which **optional modules** (`35-cloud-cli`,
+`50-ide`, `60-claude`, `65-ai-cli`, `70-repos`, `80-gui`) and which **language toolchains** (the
 `[tools]` in `30-toolchains`) to install — pre-ticked with today's defaults, so
 just pressing enter reproduces the standard install. The menu is skipped under
 `--non-interactive`, in CI, when there's no TTY, or when `gum` is missing.
@@ -57,6 +57,7 @@ detection, WSL↔Windows interop, `mise`/`direnv` shell hooks, tool shims on
 | `10-1password`  | 1Password app + CLI + SSH agent                                               | all                                    |
 | `20-dotfiles`   | Clone + run [duthaho/dotfiles](https://github.com/duthaho/dotfiles) bootstrap | all                                    |
 | `30-toolchains` | `mise` + `direnv` everywhere, `devbox` on Unix-family                         | all (devbox skipped on native Windows) |
+| `35-cloud-cli`  | Opt-in Cloudflare Wrangler and cloudflared (each independently selected)       | all (Wrangler requires npm)            |
 | `40-docker`     | Docker engine + `devenv` network + baseline compose stack                     | all                                    |
 | `50-ide`        | VS Code + Cursor + extension list + settings overlay                          | all (Linux: install warn-and-skip)     |
 | `60-claude`     | Claude Code CLI + MCP servers + plugin packs                                  | all (requires npm from 30-toolchains)  |

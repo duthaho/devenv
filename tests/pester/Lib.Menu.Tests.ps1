@@ -69,6 +69,18 @@ experimental = true
         $script:DevenvMenuSkip | Should -Not -Match '65-ai-cli'
     }
 
+    It 'Invoke-DevenvMenu enables selected Cloudflare CLI tools only' {
+        Mock Invoke-DevenvGumChoose {
+            if ($Header -like '*module*') { return @('35-cloud-cli','50-ide') }
+            if ($Header -like '*lang*') { return @('node') }
+            if ($Header -like '*Cloudflare*') { return @('wrangler') }
+            return @()
+        }
+        Invoke-DevenvMenu $script:cfg
+        $env:DEVENV_CLOUD_WRANGLER | Should -Be '1'
+        [string]::IsNullOrEmpty($env:DEVENV_CLOUD_CLOUDFLARED) | Should -BeTrue
+    }
+
     It 'Invoke-DevenvMenu marks langs set even when none chosen' {
         Mock Invoke-DevenvGumChoose {
             if ($Header -like '*module*') { return @('50-ide') }
