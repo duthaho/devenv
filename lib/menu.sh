@@ -4,7 +4,7 @@
 
 # Optional modules the menu offers, and the subset pre-ticked by default
 # (80-gui is opt-in today, so it starts unchecked).
-_DEVENV_MENU_MODULES="50-ide 60-claude 70-repos 80-gui"
+_DEVENV_MENU_MODULES="50-ide 60-claude 65-ai-cli 70-repos 80-gui"
 _DEVENV_MENU_MODULES_DEFAULT="50-ide 60-claude 70-repos"
 
 # devenv_menu_langs_available <mise.config.toml> — print the [tools] keys, one
@@ -80,6 +80,13 @@ devenv_menu_run() {
   # shellcheck disable=SC2086
   if _devenv_in_words "80-gui" $chosen_mods; then
     export DEVENV_GUI_ENABLED=1
+  fi
+  # 65-ai-cli is deliberately opt-in even when the menu is unavailable.
+  # Its runner consumes this flag so a non-interactive bootstrap never
+  # unexpectedly installs a global AI CLI.
+  # shellcheck disable=SC2086
+  if _devenv_in_words "65-ai-cli" $chosen_mods; then
+    export DEVENV_AI_CLI_ENABLED=1
   fi
 
   # DEVENV_LANGS_SET marks that the menu made a language choice, so a choice of

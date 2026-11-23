@@ -28,6 +28,7 @@ experimental = true
         $env:DEVENV_LANGS = $null
         $env:DEVENV_LANGS_SET = $null
         $env:DEVENV_GUI_ENABLED = $null
+        $env:DEVENV_AI_CLI_ENABLED = $null
         $script:DevenvMenuSkip = $null
     }
 
@@ -50,10 +51,22 @@ experimental = true
         Invoke-DevenvMenu $script:cfg
         $script:DevenvMenuSkip | Should -Match '60-claude'
         $script:DevenvMenuSkip | Should -Match '80-gui'
+        $script:DevenvMenuSkip | Should -Match '65-ai-cli'
         $script:DevenvMenuSkip | Should -Not -Match '50-ide'
         $env:DEVENV_LANGS | Should -Be 'node,go'
         $env:DEVENV_LANGS_SET | Should -Be '1'
         [string]::IsNullOrEmpty($env:DEVENV_GUI_ENABLED) | Should -BeTrue
+    }
+
+    It 'Invoke-DevenvMenu enables ai cli when 65-ai-cli is selected' {
+        Mock Invoke-DevenvGumChoose {
+            if ($Header -like '*module*') { return @('50-ide','65-ai-cli') }
+            if ($Header -like '*lang*')   { return @('node') }
+            return @()
+        }
+        Invoke-DevenvMenu $script:cfg
+        $env:DEVENV_AI_CLI_ENABLED | Should -Be '1'
+        $script:DevenvMenuSkip | Should -Not -Match '65-ai-cli'
     }
 
     It 'Invoke-DevenvMenu marks langs set even when none chosen' {

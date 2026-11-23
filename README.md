@@ -35,7 +35,7 @@ devenv help                     usage
 
 On a **fresh** machine (no `.done` markers) an interactive `devenv up` opens a
 curated `gum` checklist to pick which **optional modules** (`50-ide`,
-`60-claude`, `70-repos`, `80-gui`) and which **language toolchains** (the
+`60-claude`, `65-ai-cli`, `70-repos`, `80-gui`) and which **language toolchains** (the
 `[tools]` in `30-toolchains`) to install — pre-ticked with today's defaults, so
 just pressing enter reproduces the standard install. The menu is skipped under
 `--non-interactive`, in CI, when there's no TTY, or when `gum` is missing.
@@ -60,6 +60,7 @@ detection, WSL↔Windows interop, `mise`/`direnv` shell hooks, tool shims on
 | `40-docker`     | Docker engine + `devenv` network + baseline compose stack                     | all                                    |
 | `50-ide`        | VS Code + Cursor + extension list + settings overlay                          | all (Linux: install warn-and-skip)     |
 | `60-claude`     | Claude Code CLI + MCP servers + plugin packs                                  | all (requires npm from 30-toolchains)  |
+| `65-ai-cli`     | Opt-in OpenAI Codex CLI                                                       | all (requires npm from 30-toolchains)  |
 | `70-repos`      | Clone configured project repos + run per-repo setup                           | all                                    |
 | `80-gui`        | Opt-in GUI app bundle (Brewfile / winget.json)                                | mac/Linux/Windows (off by default)     |
 
