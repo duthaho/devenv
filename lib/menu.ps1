@@ -1,7 +1,7 @@
 # Curated first-run menu: pick optional modules + language toolchains.
 # Dot-source me. Assumes lib/log.ps1 and lib/markers.ps1 are dot-sourced.
 
-$script:DevenvMenuModules        = @('50-ide','60-claude','65-ai-cli','70-repos','80-gui')
+$script:DevenvMenuModules        = @('35-cloud-cli','50-ide','60-claude','65-ai-cli','70-repos','80-gui')
 $script:DevenvMenuModulesDefault = @('50-ide','60-claude','70-repos')
 $script:DevenvMenuSkip           = ''
 
@@ -76,6 +76,16 @@ function Invoke-DevenvMenu {
     if ('80-gui' -in $chosenMods) { $env:DEVENV_GUI_ENABLED = '1' }
     # Keep the AI CLI opt-in when the menu is unavailable (for example in CI).
     if ('65-ai-cli' -in $chosenMods) { $env:DEVENV_AI_CLI_ENABLED = '1' }
+    if ('35-cloud-cli' -in $chosenMods) {
+        try {
+            $cloudTools = @(Invoke-DevenvGumChoose -Header 'Select Cloudflare CLI tools' `
+                -Items @('wrangler','cloudflared') | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+            if ('wrangler' -in $cloudTools) { $env:DEVENV_CLOUD_WRANGLER = '1' }
+            if ('cloudflared' -in $cloudTools) { $env:DEVENV_CLOUD_CLOUDFLARED = '1' }
+        } catch {
+            Write-DevenvWarn "menu: Cloudflare CLI selection cancelled; skipping cloud CLIs ($_)"
+        }
+    }
     # Non-empty flag so "chose no languages" (empty DEVENV_LANGS) still filters
     # to an empty tool set, and survives Windows deleting empty env vars.
     $env:DEVENV_LANGS_SET = '1'

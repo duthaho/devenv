@@ -4,7 +4,7 @@
 
 # Optional modules the menu offers, and the subset pre-ticked by default
 # (80-gui is opt-in today, so it starts unchecked).
-_DEVENV_MENU_MODULES="50-ide 60-claude 65-ai-cli 70-repos 80-gui"
+_DEVENV_MENU_MODULES="35-cloud-cli 50-ide 60-claude 65-ai-cli 70-repos 80-gui"
 _DEVENV_MENU_MODULES_DEFAULT="50-ide 60-claude 70-repos"
 
 # devenv_menu_langs_available <mise.config.toml> — print the [tools] keys, one
@@ -87,6 +87,18 @@ devenv_menu_run() {
   # shellcheck disable=SC2086
   if _devenv_in_words "65-ai-cli" $chosen_mods; then
     export DEVENV_AI_CLI_ENABLED=1
+  fi
+  # Cloud CLIs are independently selectable so an opt-in does not install a
+  # tunnel client or a global npm package the user did not request.
+  # shellcheck disable=SC2086
+  if _devenv_in_words "35-cloud-cli" $chosen_mods; then
+    local cloud_tools
+    cloud_tools="$(gum choose --no-limit --header 'Select Cloudflare CLI tools' wrangler cloudflared)" \
+      || { log_warn 'menu: Cloudflare CLI selection cancelled; skipping cloud CLIs'; cloud_tools=""; }
+    # shellcheck disable=SC2086
+    if _devenv_in_words "wrangler" $cloud_tools; then export DEVENV_CLOUD_WRANGLER=1; fi
+    # shellcheck disable=SC2086
+    if _devenv_in_words "cloudflared" $cloud_tools; then export DEVENV_CLOUD_CLOUDFLARED=1; fi
   fi
 
   # DEVENV_LANGS_SET marks that the menu made a language choice, so a choice of

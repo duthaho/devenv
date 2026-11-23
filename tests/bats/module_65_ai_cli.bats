@@ -8,21 +8,27 @@ setup() {
   : "${ROOT:=$(cd "${BATS_TEST_DIRNAME}/../.." && pwd)}"
   export STUBS="$TEST_TMP/stubs"; mkdir -p "$STUBS"
   export PATH="$STUBS:$PATH"
+  export BASH_BIN="$(command -v bash)"
+  export CHMOD_BIN="$(command -v chmod)"
+  export DIRNAME_BIN="$(command -v dirname)"
+  export HEAD_BIN="$(command -v head)"
   export HOME="$TEST_TMP/home"; mkdir -p "$HOME"
   export DEVENV_AI_CLI_ENABLED=1
 }
 
 stub_tool() {
   local name="$1" body="$2"
-  printf '#!/usr/bin/env bash\n%s\n' "$body" > "$STUBS/$name"
+  printf '#!%s\n%s\n' "$BASH_BIN" "$body" > "$STUBS/$name"
   chmod +x "$STUBS/$name"
 }
 
 @test "65-ai-cli: installs Codex through npm and verifies its version" {
   stub_tool node 'exit 0'
-  stub_tool npm 'echo "npm $*" >> "$TEST_TMP/calls.log"; printf "#!/usr/bin/env bash\\necho codex 1.2.3\\n" > "$STUBS/codex"; chmod +x "$STUBS/codex"'
+  stub_tool npm 'echo "npm $*" >> "$TEST_TMP/calls.log"; printf "#!%s\\necho codex 1.2.3\\n" "$BASH_BIN" > "$STUBS/codex"; "$CHMOD_BIN" +x "$STUBS/codex"'
 
-  run env PATH="$STUBS:/usr/bin:/bin" bash "$ROOT/modules/65-ai-cli/run.sh"
+  stub_tool dirname '"$DIRNAME_BIN" "$@"'
+  stub_tool head '"$HEAD_BIN" "$@"'
+  run env PATH="$STUBS" "$BASH_BIN" "$ROOT/modules/65-ai-cli/run.sh"
   [ "$status" -eq 0 ]
   [[ "$output" == *"65-ai-cli: done"* ]]
   grep -q 'npm install -g @openai/codex' "$TEST_TMP/calls.log"
@@ -48,15 +54,16 @@ stub_tool() {
 }
 
 @test "65-ai-cli doctor: reports missing Node when Codex is absent" {
-  stub_tool dirname '/usr/bin/dirname "$@"'
-  run env PATH="$STUBS" /usr/bin/bash "$ROOT/modules/65-ai-cli/doctor.sh"
+  stub_tool dirname '"$DIRNAME_BIN" "$@"'
+  run env PATH="$STUBS" "$BASH_BIN" "$ROOT/modules/65-ai-cli/doctor.sh"
   [ "$status" -eq 0 ]
   [[ "$output" == *"Node MISSING"* ]]
 }
 
 @test "65-ai-cli doctor: passes when the opt-in module is disabled" {
   unset DEVENV_AI_CLI_ENABLED
-  run env PATH="$STUBS:/usr/bin:/bin" bash "$ROOT/modules/65-ai-cli/doctor.sh"
+  stub_tool dirname '"$DIRNAME_BIN" "$@"'
+  run env PATH="$STUBS" "$BASH_BIN" "$ROOT/modules/65-ai-cli/doctor.sh"
   [ "$status" -eq 0 ]
   [[ "$output" == *"opt-in disabled"* ]]
 }

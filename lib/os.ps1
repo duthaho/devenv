@@ -21,7 +21,16 @@ function Update-DevenvPath {
     if (-not $IsWindows) { return }
     $machine = [Environment]::GetEnvironmentVariable('PATH', 'Machine')
     $user    = [Environment]::GetEnvironmentVariable('PATH', 'User')
-    $env:PATH = "$machine;$user"
+    # Keep session-only entries such as mise shims while adding locations
+    # registered by an installer. Select-Object -Unique preserves first-seen
+    # order, so the process PATH continues to take precedence.
+    $paths = @($env:PATH, $machine, $user)
+    $segments = @($paths |
+        ForEach-Object { if ($_){ $_ -split ';' } } |
+        ForEach-Object { $_.Trim() } |
+        Where-Object { $_ } |
+        Select-Object -Unique)
+    $env:PATH = $segments -join ';'
 }
 
 function Get-DevenvDistro {

@@ -17,4 +17,16 @@ Describe 'lib/os.ps1' {
     It 'Get-DevenvDistro returns empty string on non-Linux' -Skip:($IsLinux) {
         Get-DevenvDistro | Should -Be ''
     }
+
+    It 'Update-DevenvPath retains session-only entries on Windows' -Skip:(-not $IsWindows) {
+        $originalPath = $env:PATH
+        $sessionOnly = Join-Path $TestDrive 'session-only'
+        try {
+            $env:PATH = "$sessionOnly;$originalPath"
+            Update-DevenvPath
+            ($env:PATH -split ';') | Should -Contain $sessionOnly
+        } finally {
+            $env:PATH = $originalPath
+        }
+    }
 }

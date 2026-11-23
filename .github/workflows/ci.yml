@@ -74,6 +74,8 @@ jobs:
           DOTFILES_DIR:    ${{ runner.temp }}/dotfiles
           DEVENV_NON_INTERACTIVE: '1'
           DEVENV_SKIP_NPM_INSTALL: '1'
+          DEVENV_SKIP_WRANGLER_INSTALL: '1'
+          DEVENV_SKIP_CLOUDFLARED_INSTALL: '1'
           DEVENV_SKIP_CODE_INSTALL: '1'
           DEVENV_CLAUDE_CACHE_DIR: ${{ runner.temp }}/claude-cache
           DEVENV_SKIP_REPO_CLONE: '1'
@@ -96,6 +98,8 @@ jobs:
           DOTFILES_DIR:    ${{ runner.temp }}/dotfiles
           DEVENV_NON_INTERACTIVE: '1'
           DEVENV_SKIP_NPM_INSTALL: '1'
+          DEVENV_SKIP_WRANGLER_INSTALL: '1'
+          DEVENV_SKIP_CLOUDFLARED_INSTALL: '1'
           DEVENV_SKIP_CODE_INSTALL: '1'
           DEVENV_CLAUDE_CACHE_DIR: ${{ runner.temp }}/claude-cache
           DEVENV_SKIP_REPO_CLONE: '1'
@@ -144,6 +148,8 @@ jobs:
           DOTFILES_DIR:    ${{ runner.temp }}\dotfiles
           DEVENV_NON_INTERACTIVE: '1'
           DEVENV_SKIP_NPM_INSTALL: '1'
+          DEVENV_SKIP_WRANGLER_INSTALL: '1'
+          DEVENV_SKIP_CLOUDFLARED_INSTALL: '1'
           DEVENV_SKIP_CODE_INSTALL: '1'
           DEVENV_CLAUDE_CACHE_DIR: ${{ runner.temp }}\claude-cache
           DEVENV_SKIP_REPO_CLONE: '1'
