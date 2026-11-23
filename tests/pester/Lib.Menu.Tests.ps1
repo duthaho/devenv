@@ -29,6 +29,9 @@ experimental = true
         $env:DEVENV_LANGS_SET = $null
         $env:DEVENV_GUI_ENABLED = $null
         $env:DEVENV_AI_CLI_ENABLED = $null
+        $env:DEVENV_PLATFORM_KUBECTL = $null
+        $env:DEVENV_PLATFORM_HELM = $null
+        $env:DEVENV_PLATFORM_OPENTOFU = $null
         $script:DevenvMenuSkip = $null
     }
 
@@ -80,6 +83,19 @@ experimental = true
         $env:DEVENV_CLOUD_WRANGLER | Should -Be '1'
         [string]::IsNullOrEmpty($env:DEVENV_CLOUD_CLOUDFLARED) | Should -BeTrue
         [string]::IsNullOrEmpty($env:DEVENV_CLOUD_AWS) | Should -BeTrue
+    }
+
+    It 'Invoke-DevenvMenu enables selected platform CLI tools only' {
+        Mock Invoke-DevenvGumChoose {
+            if ($Header -like '*module*') { return @('45-platform-cli','50-ide') }
+            if ($Header -like '*lang*') { return @('node') }
+            if ($Header -like '*platform CLI*') { return @('kubectl') }
+            return @()
+        }
+        Invoke-DevenvMenu $script:cfg
+        $env:DEVENV_PLATFORM_KUBECTL | Should -Be '1'
+        [string]::IsNullOrEmpty($env:DEVENV_PLATFORM_HELM) | Should -BeTrue
+        [string]::IsNullOrEmpty($env:DEVENV_PLATFORM_OPENTOFU) | Should -BeTrue
     }
 
     It 'Invoke-DevenvMenu marks langs set even when none chosen' {

@@ -97,6 +97,9 @@ jobs:
           DEVENV_SKIP_REPO_CLONE: '1'
           DEVENV_SKIP_GUI_INSTALL: '1'
           DEVENV_SKIP_SHELL_PRODUCTIVITY: '1'
+          # Service startup is integration-tested by the dedicated docker-smoke
+          # job; generic bootstrap smoke must not pull external images.
+          DEVENV_SERVICES_AUTOSTART: '0'
         run: |
           git -C tests/fixtures/fake-dotfiles init -q
           git -C tests/fixtures/fake-dotfiles add -A
@@ -121,6 +124,7 @@ jobs:
           DEVENV_SKIP_REPO_CLONE: '1'
           DEVENV_SKIP_GUI_INSTALL: '1'
           DEVENV_SKIP_SHELL_PRODUCTIVITY: '1'
+          DEVENV_SERVICES_AUTOSTART: '0'
         run: |
           skip=""
           [ "${{ matrix.os }}" = "macos-latest" ] && skip="--skip 40-docker"
