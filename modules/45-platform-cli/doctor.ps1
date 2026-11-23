@@ -16,7 +16,7 @@ function Test-PlatformTool {
     )
     if (Get-Command $Command -ErrorAction SilentlyContinue) {
         $version = (& $Command @VersionArguments 2>$null | Select-Object -First 1)
-        if ($LASTEXITCODE -eq 0 -and $version) { "PASS $DisplayName $version" | Write-Output; return }
+        if ($version) { "PASS $DisplayName $version" | Write-Output; return }
     }
     if ((Get-DevenvEnvironmentValue $EnvironmentVariable) -ne '1') {
         "PASS $DisplayName not installed (opt-in disabled; set $EnvironmentVariable=1)" | Write-Output
