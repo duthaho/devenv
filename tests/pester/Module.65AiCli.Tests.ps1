@@ -30,6 +30,16 @@ exit /b 0
         Remove-Item Env:DEVENV_AI_CLI_ENABLED -ErrorAction SilentlyContinue
     }
 
+    BeforeEach {
+        Remove-Item Env:DEVENV_TOOL_VERSIONS_FILE -ErrorAction SilentlyContinue
+        Remove-Item (Join-Path $script:stubs 'codex.cmd') -ErrorAction SilentlyContinue
+        Remove-Item (Join-Path $TestDrive 'calls.log') -ErrorAction SilentlyContinue
+    }
+
+    AfterEach {
+        Remove-Item Env:DEVENV_TOOL_VERSIONS_FILE -ErrorAction SilentlyContinue
+    }
+
     It 'installs Codex through npm and verifies its version' -Skip:(-not $IsWindows) {
         & pwsh -NoProfile -File (Join-Path $env:DEVENV_ROOT 'modules/65-ai-cli/run.ps1')
         $LASTEXITCODE | Should -Be 0
