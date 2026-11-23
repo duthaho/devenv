@@ -15,6 +15,12 @@ setup() { TEST_TMP="$(mktemp -d)"; export TEST_TMP; export DEVENV_CACHE_DIR="$TE
   [[ "$output" == *"wrangler"* ]]
 }
 
+@test "repo source accepts an X.Y minor" {
+  run bash -c 'source "$DEVENV_ROOT/lib/versions.sh"; devenv_tool_validate; devenv_tool_get kubectl version'
+  [ "$status" -eq 0 ]
+  [ "$output" = '1.37' ]
+}
+
 @test "pinned test manifest changes specs and AWS URL without module edits" {
   cp "$DEVENV_ROOT/config/tool-versions.txt" "$TEST_TMP/versions.txt"
   portable_sed_in_place 's/codex.version=latest/codex.version=0.1.2/; s/wrangler.version=latest/wrangler.version=3.4.5/; s/awscli.version=latest/awscli.version=2.9.9/' "$TEST_TMP/versions.txt"
@@ -57,6 +63,9 @@ setup() { TEST_TMP="$(mktemp -d)"; export TEST_TMP; export DEVENV_CACHE_DIR="$TE
       bad_sha) portable_sed_in_place 's/awscli.version=latest/awscli.version=2.9.9/' "$TEST_TMP/versions.txt"; printf '%s\n' "awscli.sha256.linux-x86_64=bad" "awscli.sha256.linux-aarch64=$good_sha" "awscli.sha256.macos=$good_sha" "awscli.sha256.windows=$good_sha" >> "$TEST_TMP/versions.txt" ;;
       sha_latest) printf '%s\n' "awscli.sha256.windows=$good_sha" >> "$TEST_TMP/versions.txt" ;;
       sha_npm) printf '%s\n' "codex.sha256.windows=$good_sha" >> "$TEST_TMP/versions.txt" ;;
+      repo_latest) sed -i 's/kubectl.version=1.37/kubectl.version=latest/' "$TEST_TMP/versions.txt" ;;
+      repo_semver) sed -i 's/kubectl.version=1.37/kubectl.version=1.37.0/' "$TEST_TMP/versions.txt" ;;
+      sha_repo) printf '%s\n' "kubectl.sha256.windows=$good_sha" >> "$TEST_TMP/versions.txt" ;;
     esac
     run env DEVENV_TOOL_VERSIONS_FILE="$TEST_TMP/versions.txt" bash -c 'source "$DEVENV_ROOT/lib/versions.sh"; devenv_tool_validate'
     [ "$status" -ne 0 ]
@@ -72,6 +81,9 @@ E_MISSING_SHA awscli.linux-x86_64|missing_sha
 E_BAD_SHA awscli.linux-x86_64|bad_sha
 E_SHA_ON_LATEST awscli|sha_latest
 E_SHA_ON_NPM codex|sha_npm
+E_BAD_VERSION kubectl|repo_latest
+E_BAD_VERSION kubectl|repo_semver
+E_SHA_ON_REPO kubectl|sha_repo
 CASES
 }
 

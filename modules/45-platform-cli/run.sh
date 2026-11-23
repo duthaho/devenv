@@ -7,8 +7,10 @@ ROOT="$(cd "$HERE/../.." && pwd)"
 . "$ROOT/lib/log.sh"
 # shellcheck disable=SC1091
 . "$ROOT/lib/os.sh"
+# shellcheck disable=SC1091
+. "$ROOT/lib/versions.sh"
 
-KUBECTL_REPO_MINOR="1.37"
+KUBECTL_REPO_MINOR="$(devenv_tool_get kubectl version)"
 
 if [ "${DEVENV_SKIP_PLATFORM_CLI_INSTALL:-0}" = "1" ]; then
   log_info '45-platform-cli skipped (DEVENV_SKIP_PLATFORM_CLI_INSTALL)'

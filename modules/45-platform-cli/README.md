@@ -16,8 +16,9 @@ variables to `'1'` in `$env:` and run `devenv up -Force -Only 45-platform-cli`.
 markers cache module files rather than environment-variable selections.
 
 - [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/)
-  uses Homebrew on macOS, the pinned `v1.37` official `pkgs.k8s.io` apt/rpm
-  repositories on Debian/Ubuntu and Fedora-family Linux, and `kubectl` from
+  uses Homebrew on macOS, the `pkgs.k8s.io` apt/rpm repository minor defined in
+  `config/tool-versions.txt` on Debian/Ubuntu and Fedora-family Linux, and
+  `kubectl` from
   Arch's official repositories. Windows uses winget package
   `Kubernetes.kubectl`.
 - [Helm](https://helm.sh/docs/intro/install/) uses Homebrew on macOS, the
@@ -30,9 +31,8 @@ markers cache module files rather than environment-variable selections.
   `OpenTofu.OpenTofu` on Windows.
 
 Each installer detects an executable before doing work and verifies it with a
-version command after installation. kubectl's repository minor is pinned to
-`v1.37`, as required by its official repository URLs; version-manifest
-consolidation remains tracked separately in DUTH-17.
+version command after installation. kubectl's repository minor is managed in
+`config/tool-versions.txt`, as required by its official repository URLs.
 
 ## Configuration and safety
 

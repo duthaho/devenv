@@ -8,6 +8,10 @@ Describe 'lib/versions.ps1' {
         (Get-DevenvNpmSpec codex) | Should -Be '@openai/codex'
         (Get-DevenvNpmSpec wrangler) | Should -Be 'wrangler'
     }
+    It 'accepts a repo source with an X.Y minor' {
+        (Test-DevenvToolVersions) | Should -BeTrue
+        (Get-DevenvToolSetting kubectl version) | Should -Be '1.37'
+    }
     It 'uses a pinned test manifest for all installer inputs' {
         $file = Join-Path $TestDrive 'versions.txt'
         $body = Get-Content (Join-Path $env:DEVENV_ROOT 'config/tool-versions.txt') -Raw
@@ -57,7 +61,10 @@ Describe 'lib/versions.ps1' {
         @{ Code = 'E_MISSING_SHA'; Body = $base.Replace('awscli.version=latest','awscli.version=2.9.9') },
         @{ Code = 'E_BAD_SHA'; Body = $base.Replace('awscli.version=latest','awscli.version=2.9.9').TrimEnd() + "`nawscli.sha256.linux-x86_64=bad`nawscli.sha256.linux-aarch64=$sha`nawscli.sha256.macos=$sha`nawscli.sha256.windows=$sha`n" },
         @{ Code = 'E_SHA_ON_LATEST'; Body = $base.TrimEnd() + "`nawscli.sha256.windows=$sha`n" },
-        @{ Code = 'E_SHA_ON_NPM'; Body = $base.TrimEnd() + "`ncodex.sha256.windows=$sha`n" }
+        @{ Code = 'E_SHA_ON_NPM'; Body = $base.TrimEnd() + "`ncodex.sha256.windows=$sha`n" },
+        @{ Code = 'E_BAD_VERSION kubectl'; Body = $base.Replace('kubectl.version=1.37','kubectl.version=latest') },
+        @{ Code = 'E_BAD_VERSION kubectl'; Body = $base.Replace('kubectl.version=1.37','kubectl.version=1.37.0') },
+        @{ Code = 'E_SHA_ON_REPO kubectl'; Body = $base.TrimEnd() + "`nkubectl.sha256.windows=$sha`n" }
     )
     It 'rejects the <Code> fixture' -TestCases $validationCases {
         param($Code, $Body)

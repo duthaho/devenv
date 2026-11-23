@@ -18,12 +18,15 @@ function Test-DevenvToolVersions {
         $entry = $entries[$tool]
         foreach ($field in 'module','source','version') { if (-not $entry[$field]) { $errors += "E_MISSING $tool.$field" } }
         if (-not (Test-Path (Join-Path $script:DevenvVersionsRoot "modules/$($entry['module'])"))) { $errors += "E_BAD_MODULE $tool" }
-        if ($entry['source'] -notin 'npm','release') { $errors += "E_BAD_SOURCE $tool" }
+        if ($entry['source'] -notin 'npm','release','repo') { $errors += "E_BAD_SOURCE $tool" }
         if ($entry['source'] -eq 'npm' -and -not $entry['package']) { $errors += "E_MISSING $tool.package" }
-        if ($entry['version'] -ne 'latest' -and $entry['version'] -notmatch '^\d+\.\d+\.\d+$') { $errors += "E_BAD_VERSION $tool" }
+        if ($entry['source'] -eq 'repo') {
+            if ($entry['version'] -notmatch '^\d+\.\d+$') { $errors += "E_BAD_VERSION $tool" }
+        } elseif ($entry['version'] -ne 'latest' -and $entry['version'] -notmatch '^\d+\.\d+\.\d+$') { $errors += "E_BAD_VERSION $tool" }
         $shaKeys = @($entry.Keys | Where-Object { $_ -like 'sha256.*' })
         if ($entry['version'] -eq 'latest' -and $shaKeys.Count) { $errors += "E_SHA_ON_LATEST $tool" }
         if ($entry['source'] -eq 'npm' -and $shaKeys.Count) { $errors += "E_SHA_ON_NPM $tool" }
+        if ($entry['source'] -eq 'repo' -and $shaKeys.Count) { $errors += "E_SHA_ON_REPO $tool" }
         if ($entry['source'] -eq 'release' -and $entry['version'] -ne 'latest') {
             foreach ($artifact in 'linux-x86_64','linux-aarch64','macos','windows') {
                 $sha = $entry["sha256.$artifact"]
@@ -32,7 +35,7 @@ function Test-DevenvToolVersions {
             }
         }
     }
-    foreach ($error in $errors) { [Console]::Error.WriteLine($error) }
+    foreach ($validationError in $errors) { [Console]::Error.WriteLine($validationError) }
     return ($errors.Count -eq 0)
 }
 function Get-DevenvNpmSpec { param([string]$Tool) $p=Get-DevenvToolSetting $Tool package; $v=Get-DevenvToolSetting $Tool version; if($v -eq 'latest'){$p}else{"$p@$v"} }
