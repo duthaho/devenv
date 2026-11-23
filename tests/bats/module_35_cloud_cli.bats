@@ -111,9 +111,9 @@ stub_tool() {
   run env OSTYPE=linux-gnu PATH="$STUBS:$PATH" "$BASH_BIN" "$ROOT/modules/35-cloud-cli/run.sh"
   [ "$status" -ne 0 ]
   grep -q -- '--verify' "$TEST_TMP/calls.log"
-  ! grep -q '^unzip ' "$TEST_TMP/calls.log"
-  ! grep -q '^sudo ' "$TEST_TMP/calls.log"
-  ! grep -q '/aws/install' "$TEST_TMP/calls.log"
+  ! grep -q '^unzip ' "$TEST_TMP/calls.log" || false
+  ! grep -q '^sudo ' "$TEST_TMP/calls.log" || false
+  ! grep -q '/aws/install' "$TEST_TMP/calls.log" || false
 }
 
 @test "35-cloud-cli: uses Cloudflare's v2 apt key and scoped keyring" {
