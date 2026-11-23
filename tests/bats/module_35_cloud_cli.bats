@@ -87,6 +87,7 @@ stub_tool() {
 @test "35-cloud-cli: installs AWS CLI v2 after Linux signature verification" {
   export DEVENV_CLOUD_WRANGLER=0 DEVENV_CLOUD_CLOUDFLARED=0 DEVENV_CLOUD_AWS=1
   stub_tool uname 'echo x86_64'
+  stub_tool aws 'exit 127'
   stub_tool curl 'echo "curl $*" >> "$TEST_TMP/calls.log"; while [ "$#" -gt 0 ]; do if [ "$1" = "-o" ]; then shift; : > "$1"; fi; shift; done'
   stub_tool gpg 'echo "gpg $*" >> "$TEST_TMP/calls.log"; exit 0'
   stub_tool record_aws_install 'echo "aws/install $*" >> "$TEST_TMP/calls.log"; printf "%s\\n" "#!/usr/bin/env bash" "echo aws-cli/2.25.0 Python/3.12 Linux/6 exe/x86_64" > "$STUBS/aws"; "$CHMOD_BIN" +x "$STUBS/aws"'
@@ -103,6 +104,7 @@ stub_tool() {
 @test "35-cloud-cli: stops before AWS installation when Linux signature verification fails" {
   export DEVENV_CLOUD_WRANGLER=0 DEVENV_CLOUD_CLOUDFLARED=0 DEVENV_CLOUD_AWS=1
   stub_tool uname 'echo x86_64'
+  stub_tool aws 'exit 127'
   stub_tool curl 'echo "curl $*" >> "$TEST_TMP/calls.log"; while [ "$#" -gt 0 ]; do if [ "$1" = "-o" ]; then shift; : > "$1"; fi; shift; done'
   stub_tool gpg 'echo "gpg $*" >> "$TEST_TMP/calls.log"; case "$*" in *--verify*) exit 1 ;; esac; exit 0'
   stub_tool unzip 'echo "unzip $*" >> "$TEST_TMP/calls.log"; exit 99'
