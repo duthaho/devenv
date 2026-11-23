@@ -49,6 +49,14 @@ exit /b 0
     It 'passes a pinned manifest spec to the real module' -Skip:(-not $IsWindows) {
         $manifest = Join-Path $TestDrive 'versions.txt'
         (Get-Content (Join-Path $env:DEVENV_ROOT 'config/tool-versions.txt') -Raw).Replace('codex.version=latest','codex.version=0.1.2') | Set-Content $manifest -NoNewline
+        @"
+@echo off
+echo npm %* >> "$TestDrive\calls.log"
+echo @echo off > "$script:stubs\codex.cmd"
+echo echo codex 0.1.2 >> "$script:stubs\codex.cmd"
+echo exit /b 0 >> "$script:stubs\codex.cmd"
+exit /b 0
+"@ | Set-Content -Path (Join-Path $script:stubs 'npm.cmd') -Encoding ASCII
         $env:DEVENV_TOOL_VERSIONS_FILE = $manifest
         & pwsh -NoProfile -File (Join-Path $env:DEVENV_ROOT 'modules/65-ai-cli/run.ps1')
         $LASTEXITCODE | Should -Be 0
@@ -63,6 +71,7 @@ exit /b 0
         @"
 @echo off
 echo codex 0.0.9
+exit /b 0
 "@ | Set-Content -Path (Join-Path $script:stubs 'codex.cmd') -Encoding ASCII
         $env:DEVENV_TOOL_VERSIONS_FILE = $manifest
         $output = (& pwsh -NoProfile -File (Join-Path $env:DEVENV_ROOT 'modules/65-ai-cli/run.ps1') 2>&1 | Out-String)
