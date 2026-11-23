@@ -5,11 +5,13 @@ Describe 'modules/45-platform-cli PowerShell defaults' {
         'DEVENV_PLATFORM_KUBECTL','DEVENV_PLATFORM_HELM','DEVENV_PLATFORM_OPENTOFU',
         'DEVENV_SKIP_PLATFORM_CLI_INSTALL','DEVENV_SKIP_KUBECTL_INSTALL','DEVENV_SKIP_HELM_INSTALL','DEVENV_SKIP_OPENTOFU_INSTALL' |
             ForEach-Object { Remove-Item "Env:$_" -ErrorAction SilentlyContinue }
-        $runOutput = (& pwsh -NoProfile -File (Join-Path $env:DEVENV_ROOT 'modules/45-platform-cli/run.ps1') 2>&1 | Out-String)
-        $LASTEXITCODE | Should -Be 0
+        $runOutput = @(& pwsh -NoProfile -File (Join-Path $env:DEVENV_ROOT 'modules/45-platform-cli/run.ps1') 2>&1)
+        $runExitCode = $LASTEXITCODE
+        if ($runExitCode -ne 0) { throw "run.ps1 exited $runExitCode`: $($runOutput -join [Environment]::NewLine)" }
         $runOutput | Should -Match '45-platform-cli skipped'
-        $doctorOutput = (& pwsh -NoProfile -File (Join-Path $env:DEVENV_ROOT 'modules/45-platform-cli/doctor.ps1') 2>&1 | Out-String)
-        $LASTEXITCODE | Should -Be 0
+        $doctorOutput = @(& pwsh -NoProfile -File (Join-Path $env:DEVENV_ROOT 'modules/45-platform-cli/doctor.ps1') 2>&1)
+        $doctorExitCode = $LASTEXITCODE
+        if ($doctorExitCode -ne 0) { throw "doctor.ps1 exited $doctorExitCode`: $($doctorOutput -join [Environment]::NewLine)" }
         $doctorOutput | Should -Match 'opt-in disabled'
     }
 }
