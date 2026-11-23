@@ -18,7 +18,10 @@ function Install-CodexCli {
         return
     }
     if (Get-Command codex -ErrorAction SilentlyContinue) {
-        Write-DevenvInfo "codex $((& codex --version | Select-Object -First 1)) already installed"
+        $installed = (& codex --version | Select-Object -First 1)
+        $drift = Get-DevenvToolDrift codex $installed
+        if ($drift) { Write-DevenvWarn "codex $installed; manifest $drift; run: npm install -g $(Get-DevenvNpmSpec codex)" }
+        Write-DevenvInfo "codex $installed already installed"
         return
     }
     if (-not (Get-Command node -ErrorAction SilentlyContinue) -or -not (Get-Command npm -ErrorAction SilentlyContinue)) {
@@ -36,6 +39,8 @@ function Install-CodexCli {
     }
     & codex --version | Out-Null
     if ($LASTEXITCODE -ne 0) { throw "Codex installation completed but 'codex --version' failed." }
+    $drift = Get-DevenvToolDrift codex ((& codex --version | Select-Object -First 1))
+    if ($drift) { throw "codex version mismatch: $drift" }
     Write-DevenvInfo "codex $((& codex --version | Select-Object -First 1)) installed"
 }
 

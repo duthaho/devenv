@@ -25,4 +25,12 @@ Describe 'lib/versions.ps1' {
         (Get-DevenvNpmSpec codex) | Should -Be '@openai/codex@0.1.2'
         (Get-DevenvAwsCliUrl windows) | Should -Be 'https://awscli.amazonaws.com/AWSCLIV2-2.9.9.msi'
     }
+    It 'parses CRLF manifest identically to Bash' {
+        $file = Join-Path $TestDrive 'versions-crlf.txt'
+        $content = Get-Content (Join-Path $env:DEVENV_ROOT 'config/tool-versions.txt')
+        [IO.File]::WriteAllLines($file, $content)
+        $env:DEVENV_TOOL_VERSIONS_FILE = $file
+        (Test-DevenvToolVersions) | Should -BeTrue
+        (Get-DevenvNpmSpec codex) | Should -Be '@openai/codex'
+    }
 }

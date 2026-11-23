@@ -15,7 +15,10 @@ function Install-Wrangler {
         return
     }
     if (Get-Command wrangler -ErrorAction SilentlyContinue) {
-        Write-DevenvInfo "wrangler $((& wrangler --version | Select-Object -First 1)) already installed"
+        $installed = (& wrangler --version | Select-Object -First 1)
+        $drift = Get-DevenvToolDrift wrangler $installed
+        if ($drift) { Write-DevenvWarn "wrangler $installed; manifest $drift; run: npm install -g $(Get-DevenvNpmSpec wrangler)" }
+        Write-DevenvInfo "wrangler $installed already installed"
         return
     }
     if (-not (Get-Command node -ErrorAction SilentlyContinue) -or -not (Get-Command npm -ErrorAction SilentlyContinue)) {
@@ -30,6 +33,8 @@ function Install-Wrangler {
     if (-not (Get-Command wrangler -ErrorAction SilentlyContinue)) { throw "Wrangler installation completed but 'wrangler --version' is unavailable." }
     & wrangler --version | Out-Null
     if ($LASTEXITCODE -ne 0) { throw "Wrangler installation completed but 'wrangler --version' failed." }
+    $drift = Get-DevenvToolDrift wrangler ((& wrangler --version | Select-Object -First 1))
+    if ($drift) { throw "wrangler version mismatch: $drift" }
     Write-DevenvInfo "wrangler $((& wrangler --version | Select-Object -First 1)) installed"
 }
 
@@ -71,6 +76,8 @@ function Install-AwsCli {
     $version = Get-AwsCliVersion
     if ($version) {
         if ($version -like 'aws-cli/2.*') {
+            $drift = Get-DevenvToolDrift awscli $version
+            if ($drift) { Write-DevenvWarn "AWS CLI $version; manifest $drift; run: $(Get-DevenvAwsCliUrl windows)" }
             Write-DevenvInfo "AWS CLI $version already installed"
             return
         }
@@ -91,6 +98,8 @@ function Install-AwsCli {
     Update-DevenvPath
     $version = Get-AwsCliVersion
     if (-not $version -or $version -notlike 'aws-cli/2.*') { throw "AWS CLI installation completed but 'aws --version' did not report v2." }
+    $drift = Get-DevenvToolDrift awscli $version
+    if ($drift) { throw "AWS CLI version mismatch: $drift" }
     Write-DevenvInfo "AWS CLI $version installed"
 }
 

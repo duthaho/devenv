@@ -18,7 +18,11 @@ install_codex_cli() {
   fi
 
   if command -v codex >/dev/null 2>&1; then
-    log_info "codex $(codex --version 2>/dev/null | head -n1) already installed"
+    local installed drift
+    installed="$(codex --version 2>/dev/null | head -n1)"
+    drift="$(devenv_tool_drift codex "$installed")"
+    [ -z "$drift" ] || log_warn "codex $installed; manifest $drift; run: npm install -g $(devenv_npm_spec codex)"
+    log_info "codex $installed already installed"
     return 0
   fi
 
@@ -35,6 +39,8 @@ install_codex_cli() {
     log_err "Codex installation completed but 'codex --version' is unavailable. Restart the shell to refresh mise shims, then re-run --only 65-ai-cli."
     return 1
   fi
+  drift="$(devenv_tool_drift codex "$(codex --version 2>/dev/null | head -n1)")"
+  [ -z "$drift" ] || { log_err "codex version mismatch: $drift"; return 1; }
   log_info "codex $(codex --version | head -n1) installed"
 }
 

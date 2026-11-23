@@ -8,6 +8,7 @@ devenv_tool_get() {
   local tool="$1" field="$2" key line
   key="${tool}.${field}"
   while IFS= read -r line || [ -n "$line" ]; do
+    line="${line%$'\r'}"
     [ -z "$line" ] || [[ "$line" == \#* ]] && continue
     [ "${line%%=*}" = "$key" ] && { printf '%s\n' "${line#*=}"; return 0; }
   done < "$(_devenv_versions_file)"
@@ -17,6 +18,7 @@ devenv_tool_get() {
 devenv_tool_manifest_lines() {
   local module="$1" line tool
   while IFS= read -r line || [ -n "$line" ]; do
+    line="${line%$'\r'}"
     [ -z "$line" ] || [[ "$line" == \#* ]] && continue
     tool="${line%%.*}"
     [ "$(devenv_tool_get "$tool" module 2>/dev/null || true)" = "$module" ] && printf '%s\n' "$line"
@@ -27,16 +29,28 @@ devenv_tool_validate() {
   local line n=0 key tool field err=0 tools=() seen='|' modules="$_devenv_versions_root/modules"
   [ -r "$( _devenv_versions_file )" ] || { printf 'E_MISSING manifest\n' >&2; return 1; }
   while IFS= read -r line || [ -n "$line" ]; do
+    line="${line%$'\r'}"
     n=$((n + 1)); [ -z "$line" ] || [[ "$line" == \#* ]] && continue
     if ! [[ "$line" =~ ^[a-z0-9-]+\.[a-z0-9._-]+=[^[:space:]]*$ ]]; then printf 'E_SYNTAX line %s\n' "$n" >&2; err=1; continue; fi
-    key="${line%%=*}"; tool="${key%%.*}"; field="${key#*.}"
-    if [[ "$seen" == *"|$key|"* ]]; then printf 'E_DUPLICATE %s\n' "$key" >&2; err=1; fi; seen+="$key|"
-    case "$field" in module|source|package|version|sha256.linux-x86_64|sha256.linux-aarch64|sha256.macos|sha256.windows) ;; *) printf 'E_UNKNOWN_FIELD %s\n' "$key" >&2; err=1 ;; esac
+    key="${line%%=*}"
+    tool="${key%%.*}"
+    field="${key#*.}"
+    if [[ "$seen" == *"|$key|"* ]]; then
+      printf 'E_DUPLICATE %s\n' "$key" >&2; err=1
+    fi
+    seen+="$key|"
+    case "$field" in
+      module|source|package|version|sha256.linux-x86_64|sha256.linux-aarch64|sha256.macos|sha256.windows) ;;
+      *) printf 'E_UNKNOWN_FIELD %s\n' "$key" >&2; err=1 ;;
+    esac
     [[ " ${tools[*]} " == *" $tool "* ]] || tools+=("$tool")
   done < "$(_devenv_versions_file)"
   for tool in "${tools[@]}"; do
     local module source version package has_sha=0 artifact sha
-    module="$(devenv_tool_get "$tool" module 2>/dev/null || true)"; source="$(devenv_tool_get "$tool" source 2>/dev/null || true)"; version="$(devenv_tool_get "$tool" version 2>/dev/null || true)"; package="$(devenv_tool_get "$tool" package 2>/dev/null || true)"
+    module="$(devenv_tool_get "$tool" module 2>/dev/null || true)"
+    source="$(devenv_tool_get "$tool" source 2>/dev/null || true)"
+    version="$(devenv_tool_get "$tool" version 2>/dev/null || true)"
+    package="$(devenv_tool_get "$tool" package 2>/dev/null || true)"
     [ -n "$module" ] || { printf 'E_MISSING %s.module\n' "$tool" >&2; err=1; }; [ -d "$modules/$module" ] || { printf 'E_BAD_MODULE %s\n' "$tool" >&2; err=1; }
     [ -n "$source" ] || { printf 'E_MISSING %s.source\n' "$tool" >&2; err=1; }; [[ "$source" == npm || "$source" == release ]] || { printf 'E_BAD_SOURCE %s\n' "$tool" >&2; err=1; }
     [ -n "$version" ] || { printf 'E_MISSING %s.version\n' "$tool" >&2; err=1; }; [[ "$version" == latest || "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { printf 'E_BAD_VERSION %s\n' "$tool" >&2; err=1; }

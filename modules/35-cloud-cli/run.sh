@@ -16,7 +16,11 @@ install_wrangler() {
     return 0
   fi
   if command -v wrangler >/dev/null 2>&1; then
-    log_info "wrangler $(wrangler --version 2>/dev/null | head -n1) already installed"
+    local installed drift
+    installed="$(wrangler --version 2>/dev/null | head -n1)"
+    drift="$(devenv_tool_drift wrangler "$installed")"
+    [ -z "$drift" ] || log_warn "wrangler $installed; manifest $drift; run: npm install -g $(devenv_npm_spec wrangler)"
+    log_info "wrangler $installed already installed"
     return 0
   fi
   if ! command -v node >/dev/null 2>&1 || ! command -v npm >/dev/null 2>&1; then
@@ -31,6 +35,8 @@ install_wrangler() {
     log_err "Wrangler installation completed but 'wrangler --version' is unavailable. Restart the shell to refresh mise shims, then re-run --force --only 35-cloud-cli."
     return 1
   fi
+  drift="$(devenv_tool_drift wrangler "$(wrangler --version 2>/dev/null | head -n1)")"
+  [ -z "$drift" ] || { log_err "wrangler version mismatch: $drift"; return 1; }
   log_info "wrangler $(wrangler --version | head -n1) installed"
 }
 
@@ -137,6 +143,9 @@ install_aws_cli() {
   local version
   if version="$(aws_cli_version)"; then
     if [[ "$version" == aws-cli/2.* ]]; then
+      local drift
+      drift="$(devenv_tool_drift awscli "$version")"
+      [ -z "$drift" ] || log_warn "AWS CLI $version; manifest $drift; run: $(devenv_awscli_url linux-x86_64)"
       log_info "AWS CLI $version already installed"
       return 0
     fi
@@ -152,6 +161,8 @@ install_aws_cli() {
     log_err "AWS CLI installation completed but 'aws --version' did not report v2."
     return 1
   fi
+  drift="$(devenv_tool_drift awscli "$version")"
+  [ -z "$drift" ] || { log_err "AWS CLI version mismatch: $drift"; return 1; }
   log_info "AWS CLI $version installed"
 }
 

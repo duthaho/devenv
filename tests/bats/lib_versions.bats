@@ -26,3 +26,10 @@ load test_helper
   [ "$status" -ne 0 ]
   [[ "$output" == *"E_UNKNOWN_FIELD codex.bad"* ]]
 }
+
+@test "CRLF manifest has the same npm specification as LF" {
+  sed 's/$/\r/' "$DEVENV_ROOT/config/tool-versions.txt" > "$TEST_TMP/versions-crlf.txt"
+  run env DEVENV_TOOL_VERSIONS_FILE="$TEST_TMP/versions-crlf.txt" bash -c 'source "$DEVENV_ROOT/lib/versions.sh"; devenv_tool_validate; devenv_npm_spec codex'
+  [ "$status" -eq 0 ]
+  [ "$output" = '@openai/codex' ]
+}
