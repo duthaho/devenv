@@ -15,22 +15,24 @@ variables to `'1'` in `$env:` and run `devenv up -Force -Only 45-platform-cli`.
 `--force` / `-Force` is required after a previously skipped run because module
 markers cache module files rather than environment-variable selections.
 
-- [kubectl](https://kubernetes.io/docs/tasks/tools/) uses Homebrew on macOS,
-  the `kubernetes-client` distro package on Debian/Ubuntu and Fedora-family
-  Linux, and `kubectl` from Arch's official repositories. Windows uses winget
-  package `Kubernetes.kubectl`.
-- [Helm](https://helm.sh/docs/intro/install/) uses Homebrew on macOS, Helm's
-  signed official apt repository on Debian/Ubuntu, distro packages on Fedora
-  family/Arch Linux, and winget package `Helm.Helm` on Windows.
+- [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/)
+  uses Homebrew on macOS, the pinned `v1.37` official `pkgs.k8s.io` apt/rpm
+  repositories on Debian/Ubuntu and Fedora-family Linux, and `kubectl` from
+  Arch's official repositories. Windows uses winget package
+  `Kubernetes.kubectl`.
+- [Helm](https://helm.sh/docs/intro/install/) uses Homebrew on macOS, the
+  Buildkite-hosted Helm apt repository with its published key fingerprint on
+  Debian/Ubuntu, distro packages on Fedora family/Arch Linux, and winget
+  package `Helm.Helm` on Windows.
 - [OpenTofu](https://opentofu.org/docs/intro/install/) uses Homebrew on macOS,
   OpenTofu's signed official apt/dnf repositories on Debian/Ubuntu and
   Fedora-family Linux, the Arch package, and winget package
   `OpenTofu.OpenTofu` on Windows.
 
 Each installer detects an executable before doing work and verifies it with a
-version command after installation. Versions follow the current package/release
-policy used by the existing cloud CLI module; version-manifest consolidation is
-tracked separately in DUTH-17.
+version command after installation. kubectl's repository minor is pinned to
+`v1.37`, as required by its official repository URLs; version-manifest
+consolidation remains tracked separately in DUTH-17.
 
 ## Configuration and safety
 

@@ -1,5 +1,19 @@
 . "$PSScriptRoot/TestHelper.ps1"
 
+Describe 'modules/45-platform-cli PowerShell defaults' {
+    It 'does not crash under StrictMode when optional environment variables are unset' {
+        'DEVENV_PLATFORM_KUBECTL','DEVENV_PLATFORM_HELM','DEVENV_PLATFORM_OPENTOFU',
+        'DEVENV_SKIP_PLATFORM_CLI_INSTALL','DEVENV_SKIP_KUBECTL_INSTALL','DEVENV_SKIP_HELM_INSTALL','DEVENV_SKIP_OPENTOFU_INSTALL' |
+            ForEach-Object { Remove-Item "Env:$_" -ErrorAction SilentlyContinue }
+        $runOutput = (& pwsh -NoProfile -File (Join-Path $env:DEVENV_ROOT 'modules/45-platform-cli/run.ps1') 2>&1 | Out-String)
+        $LASTEXITCODE | Should -Be 0
+        $runOutput | Should -Match '45-platform-cli skipped'
+        $doctorOutput = (& pwsh -NoProfile -File (Join-Path $env:DEVENV_ROOT 'modules/45-platform-cli/doctor.ps1') 2>&1 | Out-String)
+        $LASTEXITCODE | Should -Be 0
+        $doctorOutput | Should -Match 'opt-in disabled'
+    }
+}
+
 Describe 'modules/45-platform-cli/run.ps1 (mocked)' -Tag 'Windows' {
     BeforeAll {
         if (-not $IsWindows) { return }

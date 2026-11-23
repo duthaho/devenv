@@ -2,6 +2,11 @@
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
+function Get-DevenvEnvironmentValue {
+    param([Parameter(Mandatory)][string]$Name)
+    return [Environment]::GetEnvironmentVariable($Name, 'Process')
+}
+
 function Test-PlatformTool {
     param(
         [Parameter(Mandatory)][string]$Command,
@@ -13,7 +18,7 @@ function Test-PlatformTool {
         $version = (& $Command @VersionArguments 2>$null | Select-Object -First 1)
         if ($LASTEXITCODE -eq 0 -and $version) { "PASS $DisplayName $version" | Write-Output; return }
     }
-    if ((Get-Item "Env:$EnvironmentVariable" -ErrorAction SilentlyContinue).Value -ne '1') {
+    if ((Get-DevenvEnvironmentValue $EnvironmentVariable) -ne '1') {
         "PASS $DisplayName not installed (opt-in disabled; set $EnvironmentVariable=1)" | Write-Output
     } else {
         "WARN $DisplayName not installed (opt-in enabled)" | Write-Output

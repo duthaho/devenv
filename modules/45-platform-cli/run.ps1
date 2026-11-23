@@ -7,7 +7,12 @@ $Root = (Resolve-Path "$Here/../..").Path
 . "$Root/lib/log.ps1"
 . "$Root/lib/os.ps1"
 
-if ($env:DEVENV_SKIP_PLATFORM_CLI_INSTALL -eq '1') {
+function Get-DevenvEnvironmentValue {
+    param([Parameter(Mandatory)][string]$Name)
+    return [Environment]::GetEnvironmentVariable($Name, 'Process')
+}
+
+if ((Get-DevenvEnvironmentValue DEVENV_SKIP_PLATFORM_CLI_INSTALL) -eq '1') {
     Write-DevenvInfo '45-platform-cli skipped (DEVENV_SKIP_PLATFORM_CLI_INSTALL)'
     exit 0
 }
@@ -21,8 +26,8 @@ function Install-PlatformTool {
         [Parameter(Mandatory)][string[]]$VersionArguments,
         [Parameter(Mandatory)][string]$DisplayName
     )
-    if ((Get-Item "Env:$EnvironmentVariable" -ErrorAction SilentlyContinue).Value -ne '1') { return }
-    if ((Get-Item "Env:$SkipVariable" -ErrorAction SilentlyContinue).Value -eq '1') {
+    if ((Get-DevenvEnvironmentValue $EnvironmentVariable) -ne '1') { return }
+    if ((Get-DevenvEnvironmentValue $SkipVariable) -eq '1') {
         Write-DevenvInfo "$DisplayName install skipped ($SkipVariable)"
         return
     }

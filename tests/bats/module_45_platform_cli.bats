@@ -9,6 +9,10 @@ setup() {
   export STUBS="$TEST_TMP/stubs"; mkdir -p "$STUBS"
   export BASH_BIN="$(command -v bash)"
   export CHMOD_BIN="$(command -v chmod)"
+  export DIRNAME_BIN="$(command -v dirname)"
+  export HEAD_BIN="$(command -v head)"
+  ln -s "$DIRNAME_BIN" "$STUBS/dirname"
+  ln -s "$HEAD_BIN" "$STUBS/head"
   export DEVENV_PLATFORM_KUBECTL=0 DEVENV_PLATFORM_HELM=0 DEVENV_PLATFORM_OPENTOFU=0
 }
 
@@ -22,7 +26,7 @@ stub_tool() {
   export DEVENV_PLATFORM_KUBECTL=1
   stub_tool brew 'echo "brew $*" >> "$TEST_TMP/calls.log"; printf "#!%s\\necho clientVersion: v1.34.0\\n" "$BASH_BIN" > "$STUBS/kubectl"; "$CHMOD_BIN" +x "$STUBS/kubectl"'
 
-  run env OSTYPE=darwin PATH="$STUBS:/usr/bin:/bin" "$BASH_BIN" "$ROOT/modules/45-platform-cli/run.sh"
+  run env OSTYPE=darwin PATH="$STUBS" "$BASH_BIN" "$ROOT/modules/45-platform-cli/run.sh"
   [ "$status" -eq 0 ]
   grep -q 'brew install kubectl' "$TEST_TMP/calls.log"
   [[ "$output" == *'45-platform-cli: done'* ]]
@@ -32,7 +36,7 @@ stub_tool() {
   export DEVENV_PLATFORM_HELM=1
   stub_tool brew 'echo "brew $*" >> "$TEST_TMP/calls.log"; printf "#!%s\\necho v3.17.0\\n" "$BASH_BIN" > "$STUBS/helm"; "$CHMOD_BIN" +x "$STUBS/helm"'
 
-  run env OSTYPE=darwin PATH="$STUBS:/usr/bin:/bin" "$BASH_BIN" "$ROOT/modules/45-platform-cli/run.sh"
+  run env OSTYPE=darwin PATH="$STUBS" "$BASH_BIN" "$ROOT/modules/45-platform-cli/run.sh"
   [ "$status" -eq 0 ]
   grep -q 'brew install helm' "$TEST_TMP/calls.log"
 }
@@ -41,14 +45,14 @@ stub_tool() {
   export DEVENV_PLATFORM_OPENTOFU=1
   stub_tool brew 'echo "brew $*" >> "$TEST_TMP/calls.log"; printf "#!%s\\necho OpenTofu v1.9.0\\n" "$BASH_BIN" > "$STUBS/tofu"; "$CHMOD_BIN" +x "$STUBS/tofu"'
 
-  run env OSTYPE=darwin PATH="$STUBS:/usr/bin:/bin" "$BASH_BIN" "$ROOT/modules/45-platform-cli/run.sh"
+  run env OSTYPE=darwin PATH="$STUBS" "$BASH_BIN" "$ROOT/modules/45-platform-cli/run.sh"
   [ "$status" -eq 0 ]
   grep -q 'brew install opentofu' "$TEST_TMP/calls.log"
 }
 
 @test "45-platform-cli: does not install until a tool is selected" {
   stub_tool brew 'exit 1'
-  run env PATH="$STUBS:/usr/bin:/bin" "$BASH_BIN" "$ROOT/modules/45-platform-cli/run.sh"
+  run env PATH="$STUBS" "$BASH_BIN" "$ROOT/modules/45-platform-cli/run.sh"
   [ "$status" -eq 0 ]
   [[ "$output" == *'45-platform-cli skipped'* ]]
 }
@@ -56,7 +60,7 @@ stub_tool() {
 @test "45-platform-cli: module skip prevents selected tool installation" {
   export DEVENV_PLATFORM_KUBECTL=1 DEVENV_SKIP_PLATFORM_CLI_INSTALL=1
   stub_tool brew 'exit 99'
-  run env OSTYPE=darwin PATH="$STUBS:/usr/bin:/bin" "$BASH_BIN" "$ROOT/modules/45-platform-cli/run.sh"
+  run env OSTYPE=darwin PATH="$STUBS" "$BASH_BIN" "$ROOT/modules/45-platform-cli/run.sh"
   [ "$status" -eq 0 ]
   [[ "$output" == *'DEVENV_SKIP_PLATFORM_CLI_INSTALL'* ]]
 }
@@ -72,15 +76,19 @@ stub_tool() {
   [[ "$output" == *'already installed'* ]]
 }
 
-@test "45-platform-cli: uses official signed Helm and OpenTofu repositories" {
-  run grep -F 'https://baltocdn.com/helm/signing.asc' "$ROOT/modules/45-platform-cli/run.sh"
+@test "45-platform-cli: uses official Kubernetes, Helm and OpenTofu repositories" {
+  run grep -F 'https://pkgs.k8s.io/core:/stable:/v${KUBECTL_REPO_MINOR}/deb/Release.key' "$ROOT/modules/45-platform-cli/run.sh"
+  [ "$status" -eq 0 ]
+  run grep -F 'https://packages.buildkite.com/helm-linux/helm-debian/gpgkey' "$ROOT/modules/45-platform-cli/run.sh"
   [ "$status" -eq 0 ]
   run grep -F 'https://packages.opentofu.org/opentofu/tofu/any/' "$ROOT/modules/45-platform-cli/run.sh"
+  [ "$status" -eq 0 ]
+  run grep -F 'https://packages.opentofu.org/opentofu/tofu/gpgkey' "$ROOT/modules/45-platform-cli/run.sh"
   [ "$status" -eq 0 ]
 }
 
 @test "45-platform-cli doctor: reports disabled tools independently" {
-  run env PATH="$STUBS:/usr/bin:/bin" "$BASH_BIN" "$ROOT/modules/45-platform-cli/doctor.sh"
+  run env PATH="$STUBS" "$BASH_BIN" "$ROOT/modules/45-platform-cli/doctor.sh"
   [ "$status" -eq 0 ]
   [[ "$output" == *'kubectl not installed (opt-in disabled'* ]]
   [[ "$output" == *'Helm not installed (opt-in disabled'* ]]
