@@ -36,6 +36,22 @@ exit /b 0
         Get-Content (Join-Path $TestDrive 'calls.log') -Raw | Should -Match 'install -g wrangler'
     }
 
+    It 'installs selected cloudflared through winget' -Skip:(-not $IsWindows) {
+        $env:DEVENV_CLOUD_WRANGLER = '0'
+        $env:DEVENV_CLOUD_CLOUDFLARED = '1'
+        @"
+@echo off
+echo winget %* >> "$TestDrive\calls.log"
+echo @echo off > "$script:stubs\cloudflared.cmd"
+echo echo cloudflared 2026.1.0 >> "$script:stubs\cloudflared.cmd"
+exit /b 0
+"@ | Set-Content -Path (Join-Path $script:stubs 'winget.cmd') -Encoding ASCII
+
+        & pwsh -NoProfile -File (Join-Path $env:DEVENV_ROOT 'modules/35-cloud-cli/run.ps1')
+        $LASTEXITCODE | Should -Be 0
+        Get-Content (Join-Path $TestDrive 'calls.log') -Raw | Should -Match 'install .*Cloudflare.cloudflared'
+    }
+
     It 'doctor reports each disabled tool independently' -Skip:(-not $IsWindows) {
         $env:DEVENV_CLOUD_WRANGLER = '0'
         $env:DEVENV_CLOUD_CLOUDFLARED = '0'
