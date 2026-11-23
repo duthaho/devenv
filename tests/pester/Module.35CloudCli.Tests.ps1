@@ -35,6 +35,15 @@ exit /b 0
             ForEach-Object { Remove-Item "Env:$_" -ErrorAction SilentlyContinue }
     }
 
+    BeforeEach {
+        Remove-Item Env:DEVENV_SKIP_AWS_CLI_INSTALL -ErrorAction SilentlyContinue
+        Remove-Item Env:DEVENV_TOOL_VERSIONS_FILE -ErrorAction SilentlyContinue
+    }
+
+    AfterEach {
+        Remove-Item Env:DEVENV_TOOL_VERSIONS_FILE -ErrorAction SilentlyContinue
+    }
+
     It 'installs selected Wrangler through npm' -Skip:(-not $IsWindows) {
         & pwsh -NoProfile -File (Join-Path $env:DEVENV_ROOT 'modules/35-cloud-cli/run.ps1')
         $LASTEXITCODE | Should -Be 0
