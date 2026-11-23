@@ -11,8 +11,8 @@ setup() {
   export CHMOD_BIN="$(command -v chmod)"
   export DIRNAME_BIN="$(command -v dirname)"
   export HEAD_BIN="$(command -v head)"
-  ln -s "$DIRNAME_BIN" "$STUBS/dirname"
-  ln -s "$HEAD_BIN" "$STUBS/head"
+  stub_tool dirname '"$DIRNAME_BIN" "$@"'
+  stub_tool head '"$HEAD_BIN" "$@"'
   export DEVENV_PLATFORM_KUBECTL=0 DEVENV_PLATFORM_HELM=0 DEVENV_PLATFORM_OPENTOFU=0
 }
 
