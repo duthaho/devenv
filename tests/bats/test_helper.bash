@@ -38,3 +38,18 @@ stub_cmd() {
   chmod +x "$stubdir/$name"
   export PATH="$stubdir:$PATH"
 }
+
+# BSD sed requires a backup suffix for in-place edits; GNU sed accepts it too.
+portable_sed_in_place() {
+  local expression="$1" file="$2"
+  sed -i.bak "$expression" "$file" && rm -f "${file}.bak"
+}
+
+# pwsh on Windows cannot resolve MSYS paths passed by bats.
+pwsh_path() {
+  if command -v cygpath >/dev/null 2>&1; then
+    cygpath -m "$1"
+  else
+    printf '%s\n' "$1"
+  fi
+}

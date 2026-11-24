@@ -23,7 +23,7 @@ setup() {
 @test "35-cloud-cli: module passes pinned Wrangler spec to npm" {
   export DEVENV_CLOUD_CLOUDFLARED=0
   cp "$ROOT/config/tool-versions.txt" "$TEST_TMP/versions.txt"
-  sed -i 's/wrangler.version=latest/wrangler.version=3.4.5/' "$TEST_TMP/versions.txt"
+  portable_sed_in_place 's/wrangler.version=latest/wrangler.version=3.4.5/' "$TEST_TMP/versions.txt"
   stub_tool node 'exit 0'
   stub_tool npm 'echo "npm $*" >> "$TEST_TMP/calls.log"; printf "#!/usr/bin/env bash\necho wrangler 3.4.5\n" > "$STUBS/wrangler"; chmod +x "$STUBS/wrangler"'
   run env DEVENV_TOOL_VERSIONS_FILE="$TEST_TMP/versions.txt" PATH="$STUBS:/usr/bin:/bin" "$BASH_BIN" "$ROOT/modules/35-cloud-cli/run.sh"
@@ -119,7 +119,7 @@ stub_tool() {
   case "${OSTYPE:-}" in msys*|cygwin*|win32*) skip "Linux installer mock: MSYS cannot chmod the gnupg homedir" ;; esac
   export DEVENV_CLOUD_WRANGLER=0 DEVENV_CLOUD_CLOUDFLARED=0 DEVENV_CLOUD_AWS=1
   cp "$ROOT/config/tool-versions.txt" "$TEST_TMP/versions.txt"
-  sed -i 's/awscli.version=latest/awscli.version=2.9.9/' "$TEST_TMP/versions.txt"
+  portable_sed_in_place 's/awscli.version=latest/awscli.version=2.9.9/' "$TEST_TMP/versions.txt"
   printf '%s\n' 'awscli.sha256.linux-x86_64=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' 'awscli.sha256.linux-aarch64=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' 'awscli.sha256.macos=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' 'awscli.sha256.windows=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' >> "$TEST_TMP/versions.txt"
   stub_tool uname 'echo x86_64'; stub_tool aws 'exit 127'
   stub_tool curl 'echo "curl $*" >> "$TEST_TMP/calls.log"; while [ "$#" -gt 0 ]; do [ "$1" = "-o" ] && { shift; : > "$1"; }; shift; done'
@@ -136,7 +136,7 @@ stub_tool() {
   case "${OSTYPE:-}" in msys*|cygwin*|win32*) skip "Linux installer mock: MSYS cannot chmod the gnupg homedir" ;; esac
   export DEVENV_CLOUD_WRANGLER=0 DEVENV_CLOUD_CLOUDFLARED=0 DEVENV_CLOUD_AWS=1
   cp "$ROOT/config/tool-versions.txt" "$TEST_TMP/versions.txt"
-  sed -i 's/awscli.version=latest/awscli.version=2.9.9/' "$TEST_TMP/versions.txt"
+  portable_sed_in_place 's/awscli.version=latest/awscli.version=2.9.9/' "$TEST_TMP/versions.txt"
   printf '%s\n' 'awscli.sha256.linux-x86_64=0000000000000000000000000000000000000000000000000000000000000000' 'awscli.sha256.linux-aarch64=0000000000000000000000000000000000000000000000000000000000000000' 'awscli.sha256.macos=0000000000000000000000000000000000000000000000000000000000000000' 'awscli.sha256.windows=0000000000000000000000000000000000000000000000000000000000000000' >> "$TEST_TMP/versions.txt"
   stub_tool uname 'echo x86_64'; stub_tool aws 'exit 127'
   stub_tool curl 'echo "curl $*" >> "$TEST_TMP/calls.log"; while [ "$#" -gt 0 ]; do [ "$1" = "-o" ] && { shift; echo "$1" >> "$TEST_TMP/archive-path"; printf bad > "$1"; }; shift; done'

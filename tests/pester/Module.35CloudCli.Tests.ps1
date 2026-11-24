@@ -35,6 +35,15 @@ exit /b 0
             ForEach-Object { Remove-Item "Env:$_" -ErrorAction SilentlyContinue }
     }
 
+    BeforeEach {
+        Remove-Item Env:DEVENV_SKIP_AWS_CLI_INSTALL -ErrorAction SilentlyContinue
+        Remove-Item Env:DEVENV_TOOL_VERSIONS_FILE -ErrorAction SilentlyContinue
+    }
+
+    AfterEach {
+        Remove-Item Env:DEVENV_TOOL_VERSIONS_FILE -ErrorAction SilentlyContinue
+    }
+
     It 'installs selected Wrangler through npm' -Skip:(-not $IsWindows) {
         & pwsh -NoProfile -File (Join-Path $env:DEVENV_ROOT 'modules/35-cloud-cli/run.ps1')
         $LASTEXITCODE | Should -Be 0
@@ -84,7 +93,10 @@ exit /b 0
     }
 
     It 'uses pinned AWS URL and stops before msiexec on a bad checksum' -Skip:(-not $IsWindows) {
-        Remove-Item (Join-Path $script:stubs 'aws.cmd') -ErrorAction SilentlyContinue
+        @'
+@echo off
+exit /b 127
+'@ | Set-Content -Path (Join-Path $script:stubs 'aws.cmd') -Encoding ASCII
         $manifest = Join-Path $TestDrive 'versions.txt'
         $body = (Get-Content (Join-Path $env:DEVENV_ROOT 'config/tool-versions.txt') -Raw).Replace('awscli.version=latest','awscli.version=2.9.9').TrimEnd()
         $sha = [string]::new('0', 64)
