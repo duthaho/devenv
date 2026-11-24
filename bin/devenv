@@ -164,9 +164,8 @@ cmd_services() {
       case "$svc" in
         postgres) _retry "$rtries" "$rdelay" _compose exec -T postgres psql -U dev -d dev -c "CREATE DATABASE $db;" ;;
         mysql)    _retry "$rtries" "$rdelay" _compose exec -T mysql mysql -u root -pdev -e "CREATE DATABASE IF NOT EXISTS $db;" ;;
-        minio)    _compose exec -T minio sh -c "mc alias set local http://localhost:9000 dev devsecret >/dev/null && mc mb -p local/${proj}-dev" ;;
         opensearch) _compose exec -T opensearch curl -fsS -X PUT "http://localhost:9200/$db" ;;
-        *) log_err "init: unsupported service '$svc' (supported: postgres, mysql, minio, opensearch)"; return 2 ;;
+        *) log_err "init: unsupported service '$svc' (supported: postgres, mysql, opensearch)"; return 2 ;;
       esac
       ;;
     nuke)
