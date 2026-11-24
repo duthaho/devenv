@@ -1,7 +1,8 @@
 # External CLI version manifest. Single source of truth for versions that
 # devenv chooses. Format: <tool>.<field>=<value>; '#' comments; blank lines ok.
-# version: 'latest' or exact X.Y.Z. Pinned release tools need sha256 per artifact.
-# Not managed here (OS package repos): gh fzf ripgrep bat zoxide cloudflared.
+# version: npm/release use 'latest' or exact X.Y.Z; repo uses an exact X.Y minor.
+# Pinned release tools need sha256 per artifact.
+# Not managed here (OS package repos): gh fzf ripgrep bat zoxide cloudflared helm opentofu.
 
 codex.module=65-ai-cli
 codex.source=npm
@@ -21,3 +22,7 @@ awscli.version=latest
 # awscli.sha256.linux-aarch64=
 # awscli.sha256.macos=
 # awscli.sha256.windows=
+
+kubectl.module=45-platform-cli
+kubectl.source=repo
+kubectl.version=1.37

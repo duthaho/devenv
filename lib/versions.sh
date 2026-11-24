@@ -52,12 +52,18 @@ devenv_tool_validate() {
     version="$(devenv_tool_get "$tool" version 2>/dev/null || true)"
     package="$(devenv_tool_get "$tool" package 2>/dev/null || true)"
     [ -n "$module" ] || { printf 'E_MISSING %s.module\n' "$tool" >&2; err=1; }; [ -d "$modules/$module" ] || { printf 'E_BAD_MODULE %s\n' "$tool" >&2; err=1; }
-    [ -n "$source" ] || { printf 'E_MISSING %s.source\n' "$tool" >&2; err=1; }; [[ "$source" == npm || "$source" == release ]] || { printf 'E_BAD_SOURCE %s\n' "$tool" >&2; err=1; }
-    [ -n "$version" ] || { printf 'E_MISSING %s.version\n' "$tool" >&2; err=1; }; [[ "$version" == latest || "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { printf 'E_BAD_VERSION %s\n' "$tool" >&2; err=1; }
+    [ -n "$source" ] || { printf 'E_MISSING %s.source\n' "$tool" >&2; err=1; }; [[ "$source" == npm || "$source" == release || "$source" == repo ]] || { printf 'E_BAD_SOURCE %s\n' "$tool" >&2; err=1; }
+    [ -n "$version" ] || { printf 'E_MISSING %s.version\n' "$tool" >&2; err=1; }
+    if [ "$source" = repo ]; then
+      [[ "$version" =~ ^[0-9]+\.[0-9]+$ ]] || { printf 'E_BAD_VERSION %s\n' "$tool" >&2; err=1; }
+    else
+      [[ "$version" == latest || "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { printf 'E_BAD_VERSION %s\n' "$tool" >&2; err=1; }
+    fi
     [ "$source" != npm ] || [ -n "$package" ] || { printf 'E_MISSING %s.package\n' "$tool" >&2; err=1; }
     for artifact in linux-x86_64 linux-aarch64 macos windows; do sha="$(devenv_tool_get "$tool" "sha256.$artifact" 2>/dev/null || true)"; [ -z "$sha" ] || has_sha=1; done
     [ "$version" != latest ] || [ "$has_sha" = 0 ] || { printf 'E_SHA_ON_LATEST %s\n' "$tool" >&2; err=1; }
     [ "$source" != npm ] || [ "$has_sha" = 0 ] || { printf 'E_SHA_ON_NPM %s\n' "$tool" >&2; err=1; }
+    [ "$source" != repo ] || [ "$has_sha" = 0 ] || { printf 'E_SHA_ON_REPO %s\n' "$tool" >&2; err=1; }
     if [ "$source" = release ] && [ "$version" != latest ]; then for artifact in linux-x86_64 linux-aarch64 macos windows; do sha="$(devenv_tool_get "$tool" "sha256.$artifact" 2>/dev/null || true)"; [ -n "$sha" ] || { printf 'E_MISSING_SHA %s.%s\n' "$tool" "$artifact" >&2; err=1; }; [[ "$sha" =~ ^[0-9a-f]{64}$ ]] || { printf 'E_BAD_SHA %s.%s\n' "$tool" "$artifact" >&2; err=1; }; done; fi
   done
   return "$err"

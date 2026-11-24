@@ -9,6 +9,7 @@ setup() {
   export STUBS="$TEST_TMP/stubs"; mkdir -p "$STUBS"
   export BASH_BIN="$(command -v bash)"
   export CHMOD_BIN="$(command -v chmod)"
+  export CAT_BIN="$(command -v cat)"
   export DIRNAME_BIN="$(command -v dirname)"
   export HEAD_BIN="$(command -v head)"
   stub_tool dirname '"$DIRNAME_BIN" "$@"'
@@ -96,6 +97,33 @@ stub_tool() {
   [ "$status" -eq 0 ]
   run grep -F 'https://packages.opentofu.org/opentofu/tofu/gpgkey' "$ROOT/modules/45-platform-cli/run.sh"
   [ "$status" -eq 0 ]
+}
+
+@test "45-platform-cli: reads the kubectl repository minor from the manifest for apt and dnf" {
+  local etc_dir manifest distro
+  manifest="$TEST_TMP/versions.txt"
+  cp "$ROOT/config/tool-versions.txt" "$manifest"
+  portable_sed_in_place 's/kubectl.version=1.37/kubectl.version=1.38/' "$manifest"
+
+  stub_tool curl 'echo "curl $*" >> "$TEST_TMP/calls.log"; printf key'
+  stub_tool sudo 'echo "sudo $*" >> "$TEST_TMP/calls.log"; case "$1" in apt-get|dnf) "$@" ;; gpg) "$CAT_BIN" >/dev/null ;; tee) "$CAT_BIN" > "$TEST_TMP/repo-content" ;; esac'
+
+  for distro in ubuntu fedora; do
+    : > "$TEST_TMP/calls.log"
+    : > "$TEST_TMP/repo-content"
+    rm -f "$STUBS/kubectl"
+    etc_dir="$TEST_TMP/etc-$distro"; mkdir -p "$etc_dir"
+    printf 'ID=%s\n' "$distro" > "$etc_dir/os-release"
+    if [ "$distro" = ubuntu ]; then
+      stub_tool apt-get 'echo "apt-get $*" >> "$TEST_TMP/calls.log"; case " $* " in *" kubectl "*) printf "%s\n" "#!$BASH_BIN" "echo clientVersion: v1.38.0" > "$STUBS/kubectl"; "$CHMOD_BIN" +x "$STUBS/kubectl" ;; esac'
+    else
+      stub_tool dnf 'echo "dnf $*" >> "$TEST_TMP/calls.log"; case " $* " in *" kubectl "*) printf "%s\n" "#!$BASH_BIN" "echo clientVersion: v1.38.0" > "$STUBS/kubectl"; "$CHMOD_BIN" +x "$STUBS/kubectl" ;; esac'
+    fi
+    run env OSTYPE=linux-gnu DEVENV_ETC="$etc_dir" DEVENV_PROC="$TEST_TMP/no-proc" DEVENV_TOOL_VERSIONS_FILE="$manifest" DEVENV_PLATFORM_KUBECTL=1 PATH="$STUBS" "$BASH_BIN" "$ROOT/modules/45-platform-cli/run.sh"
+    [ "$status" -eq 0 ]
+    if [ "$distro" = ubuntu ]; then grep -F 'v1.38' "$TEST_TMP/calls.log"; fi
+    grep -F 'v1.38' "$TEST_TMP/repo-content"
+  done
 }
 
 @test "45-platform-cli doctor: reports disabled tools independently" {
