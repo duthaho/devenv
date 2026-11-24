@@ -86,7 +86,6 @@ After `devenv up`, the baseline Docker stack runs on the shared `devenv` network
 | MySQL    | `mysql.devenv`    | `localhost:3306`                  | `dev` | `dev`       |
 | Redis    | `redis.devenv`    | `localhost:6379`                  | —     | —           |
 | Mailpit  | `mailpit.devenv`  | UI `localhost:8025`, SMTP `:1025` | —     | —           |
-| MinIO    | `minio.devenv`    | API `:9000`, UI `:9001`           | `dev` | `devsecret` |
 | Adminer  | `adminer.devenv`  | `localhost:8080`                  | —     | —           |
 
 Optional profiles: `aws` (LocalStack), `search` (OpenSearch + Dashboards), `vectors` (Qdrant), `queues` (RabbitMQ + Redpanda), `analytics` (ClickHouse), `observability` (Jaeger + Prometheus + Grafana + Loki + OTel), `alt-db` (Mongo), `auth` (Keycloak).

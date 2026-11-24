@@ -116,9 +116,8 @@ function Invoke-Services {
             switch ($svc) {
                 'postgres'   { Invoke-DevenvRetry $rtries $rdelay { Invoke-Compose @('exec','-T','postgres','psql','-U','dev','-d','dev','-c',"CREATE DATABASE $db;") } }
                 'mysql'      { Invoke-DevenvRetry $rtries $rdelay { Invoke-Compose @('exec','-T','mysql','mysql','-u','root','-pdev','-e',"CREATE DATABASE IF NOT EXISTS $db;") } }
-                'minio'      { Invoke-Compose @('exec','-T','minio','sh','-c',"mc alias set local http://localhost:9000 dev devsecret >`$null && mc mb -p local/$proj-dev") }
                 'opensearch' { Invoke-Compose @('exec','-T','opensearch','curl','-fsS','-X','PUT',"http://localhost:9200/$db") }
-                default { Write-DevenvError "init: unsupported service '$svc' (supported: postgres, mysql, minio, opensearch)"; exit 2 }
+                default { Write-DevenvError "init: unsupported service '$svc' (supported: postgres, mysql, opensearch)"; exit 2 }
             }
         }
         'nuke' {

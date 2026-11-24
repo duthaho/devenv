@@ -130,12 +130,12 @@ status_stub() {
   status_stub 0 \
     '{"Service":"postgres","State":"running","Health":"healthy"}' \
     '{"Service":"mailpit","State":"running","Health":""}' \
-    '{"Service":"minio","State":"running","Health":"starting"}'
+    '{"Service":"redis","State":"running","Health":"starting"}'
   run bash "$ROOT/bin/devenv" services status
   [[ "$output" == *"SERVICE"*"STATE"*"READY"* ]]
   [[ "$output" =~ postgres[[:space:]]+running[[:space:]]+healthy ]]
   [[ "$output" =~ mailpit[[:space:]]+running[[:space:]]+no-probe ]]
-  [[ "$output" =~ minio[[:space:]]+running[[:space:]]+starting ]]
+  [[ "$output" =~ redis[[:space:]]+running[[:space:]]+starting ]]
 }
 
 @test "services status exits 0 when all services healthy or no-probe" {
@@ -156,7 +156,7 @@ status_stub() {
 
 @test "services status exits non-zero when a service is still starting" {
   status_stub 0 \
-    '{"Service":"minio","State":"running","Health":"starting"}'
+    '{"Service":"redis","State":"running","Health":"starting"}'
   run bash "$ROOT/bin/devenv" services status
   [ "$status" -ne 0 ]
 }

@@ -166,11 +166,11 @@ exit /b 1
     It 'services status exits non-zero when a service is not ready' -Skip:(-not $IsWindows) {
         Set-StatusStub -ExitCode 0 -Lines @(
             '{"Service":"postgres","State":"running","Health":"healthy"}',
-            '{"Service":"minio","State":"running","Health":"starting"}'
+            '{"Service":"redis","State":"running","Health":"starting"}'
         )
         $out = & pwsh -NoProfile -File $script:cli services status 2>&1
         $LASTEXITCODE | Should -Not -Be 0
-        ($out -join "`n") | Should -Match 'minio\s+running\s+starting'
+        ($out -join "`n") | Should -Match 'redis\s+running\s+starting'
     }
 
     It 'services status with no running services exits 0 with a notice' -Skip:(-not $IsWindows) {
