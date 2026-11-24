@@ -79,6 +79,7 @@ exit /b 0
         $output | Should -Match 'pinned 0.1.2, installed 0.0.9'
         Test-Path (Join-Path $TestDrive 'calls.log') | Should -BeFalse
         $doctor = (& pwsh -NoProfile -File (Join-Path $env:DEVENV_ROOT 'modules/65-ai-cli/doctor.ps1') 2>&1 | Out-String)
+        $LASTEXITCODE | Should -Be 0
         $doctor | Should -Match 'WARN codex codex 0.0.9 \(pinned 0.1.2, installed 0.0.9\)'
         Remove-Item Env:DEVENV_TOOL_VERSIONS_FILE -ErrorAction SilentlyContinue
     }
